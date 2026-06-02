@@ -48,13 +48,18 @@ jobs:
       - name: Build Debug APK
         run: ./gradlew assembleDebug --no-daemon
 
-      # 7. НЕУЯЗВИМЫЙ ПОИСК И ОТПРАВКА APK В АРТЕФАКТЫ
+      # 7. СКАНЕР: Находим, куда именно Gradle спрятал готовый APK
+      - name: Find APK Files
+        run: |
+          echo "=== Поиск всех скомпилированных APK файлов ==="
+          find . -name "*.apk" -type f
+          echo "============================================="
+
+      # 8. ЗАГРУЗКА АРТЕФАКТОВ С ПОЛНЫМ ПОКРЫТИЕМ
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: WeryGram-Debug-APK
           path: |
-            **/build/outputs/apk/debug/*.apk
-            **/build/outputs/apk/*/*.apk
-            build/outputs/apk/**/*.apk
+            **/*.apk
           if-no-files-found: error
