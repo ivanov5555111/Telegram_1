@@ -34,13 +34,13 @@ def patch_werygram_core():
         code = code.replace(anchor, f'{werygram_toggle}\n        {anchor}')
         print("✅ Кнопка-тумблер WeryGram установлена на самый верх первого списка!")
     else:
-        # Резервный вариант без буквы f (исправлено!)
         code = code.replace("switch (item.id) {", "items.add(0, UItem.asCheck(9999, \"WeryGram Premium\"));\n        switch (item.id) {")
         print("✅ Кнопка-тумблер WeryGram установлена в начало списка (резервный метод).")
 
     # Вшиваем обработку клика: переключение тумблера + моментальное уведомление (Toast)
     switch_anchor = "switch (item.id) {"
     if switch_anchor in code:
+        # ИСПРАВЛЕНО: Безопасное обновление элемента через родительский RecyclerView
         click_logic = """case 9999: {
             boolean newState = !org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("visual_premium", false);
             org.telegram.messenger.MessagesController.getGlobalMainSettings().edit().putBoolean("visual_premium", newState).apply();
@@ -54,13 +54,16 @@ def patch_werygram_core():
             
             // Мгновенно обновляем наш профиль на экране
             org.telegram.messenger.UserConfig.getInstance(currentAccount).getCurrentUser();
-            if (SettingsActivity.this.getAdapter() != null) {
-                SettingsActivity.this.getAdapter().notifyItemChanged(position);
+            if (view != null && view.getParent() instanceof androidx.recyclerview.widget.RecyclerView) {
+                androidx.recyclerview.widget.RecyclerView.Adapter adapter = ((androidx.recyclerview.widget.RecyclerView) view.getParent()).getAdapter();
+                if (adapter != null) {
+                    adapter.notifyItemChanged(position);
+                }
             }
             break;
         }"""
         code = code.replace(switch_anchor, f"{switch_anchor}\n            {click_logic}")
-        print("✅ Быстрый переключатель с уведомлением успешно добавлен in клики!")
+        print("✅ Быстрый переключатель с уведомлением успешно добавлен в клики!")
 
     with open(settings_path, "w", encoding="utf-8") as f:
         f.write(code)
