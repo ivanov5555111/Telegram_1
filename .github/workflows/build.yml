@@ -1,4 +1,4 @@
-name: Build WeryGram APK
+name: Build WeryGram APK11
 
 on:
   push:
@@ -16,6 +16,14 @@ jobs:
           submodules: recursive
           fetch-depth: 0
 
+      - name: Free Disk Space
+        run: |
+          df -h /
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache
+          df -h /
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -28,40 +36,51 @@ jobs:
         with:
           python-version: '3.x'
 
+      - name: Reset patched files
+        run: |
+          git checkout HEAD -- TMessagesProj/src/main/java/org/telegram/messenger/UserConfig.java
+          git checkout HEAD -- TMessagesProj/src/main/java/org/telegram/messenger/MessagesController.java
+          git checkout HEAD -- TMessagesProj/src/main/java/org/telegram/ui/SettingsActivity.java
+
       - name: Run Patcher Script
         run: |
           if [ -f patcher.py ]; then
             python patcher.py
           else
-            echo "⚠️ Предупреждение: Файл patcher.py не найден в корне проекта!"
+            echo "Warning: patcher.py not found!"
           fi
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=/usr/local/lib/android/sdk" > local.properties
+          cat local.properties
 
       - name: Grant Execute Permission for Gradle
         run: chmod +x gradlew
 
       - name: Build Debug APK
-        run: ./gradlew assembleDebug --no-daemon --stacktrace 2>&1 | tee build_log.txt; exit ${PIPESTATUS[0]}
+        run: |
+          ./gradlew assembleDebug --no-daemon --stacktrace > build_log.txt 2>&1 || (cat build_log.txt; exit 1)
 
-      - name: Show Build Log Tail on Failure
+      - name: Show Build Log on Failure
         if: failure()
         run: |
-          echo "=== ПОСЛЕДНИЕ 200 СТРОК ==="
-          tail -200 build_log.txt
-          echo "=== ОШИБКИ ==="
-          grep -n "Caused by\|error:\|FAILED\|Exception" build_log.txt | tail -50
+          echo "=== LAST 300 LINES ==="
+          tail -300 build_log.txt
+          echo "=== ALL ERRORS ==="
+          grep -n "error:\|Caused by:\|Exception" build_log.txt | tail -50
 
       - name: Find APK Files
-        run: |
-          echo "=== Поиск APK ==="
-          find . -name "*.apk" -type f
+        if: success()
+        run: find . -name "*.apk" -type f
 
       - name: Upload APK Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: WeryGram-Debug-APK
-          path: |
-            **/*.apk
-          if-no-files-found: error
+          path: "**/*.apk"
+          retention-days: 7
 
       - name: Upload Build Log on Failure
         if: failure()
@@ -69,3 +88,4 @@ jobs:
         with:
           name: build-log
           path: build_log.txt
+          retention-days: 7
