@@ -110,25 +110,22 @@ public class WeryGramPremiumActivity extends BaseFragment {
         divider.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
         root.addView(divider);
         TextView saveEmoji = new TextView(context);
-        saveEmoji.setText("\U0001F4BE \u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0438\u0439 emoji");
+        saveEmoji.setText("\u0421\u043e\u0445\u0440\u0430\u043d\u0438\u0442\u044c \u0442\u0435\u043a\u0443\u0449\u0438\u0439 emoji");
         saveEmoji.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
         saveEmoji.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4));
         saveEmoji.setPadding(AndroidUtilities.dp(16),AndroidUtilities.dp(14),AndroidUtilities.dp(16),AndroidUtilities.dp(14));
         saveEmoji.setOnClickListener(v -> {
             TLRPC.User u = UserConfig.getInstance(account).getCurrentUser();
-            if (u != null && u.emoji_status != null) {
-                long eid = 0;
-                if (u.emoji_status instanceof TLRPC.TL_emojiStatus) {
-                    eid = ((TLRPC.TL_emojiStatus) u.emoji_status).document_id;
-                } else if (u.emoji_status instanceof TLRPC.TL_emojiStatusUntil) {
-                    eid = ((TLRPC.TL_emojiStatusUntil) u.emoji_status).document_id;
-                }
+            if (u != null && u.emoji_status instanceof TLRPC.TL_emojiStatus) {
+                long eid = ((TLRPC.TL_emojiStatus) u.emoji_status).document_id;
                 if (eid != 0) {
                     prefs.edit().putLong("wery_emoji_id", eid).apply();
                     Toast.makeText(context, "Emoji \u0441\u043e\u0445\u0440\u0430\u043d\u0451\u043d!", android.widget.Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(context, "\u041d\u0435\u0442 emoji \u0434\u043b\u044f \u0441\u043e\u0445\u0440\u0430\u043d\u0435\u043d\u0438\u044f", android.widget.Toast.LENGTH_SHORT).show();
+                    Toast.makeText(context, "\u041d\u0435\u0442 emoji", android.widget.Toast.LENGTH_SHORT).show();
                 }
+            } else {
+                Toast.makeText(context, "\u041d\u0435\u0442 emoji", android.widget.Toast.LENGTH_SHORT).show();
             }
         });
         root.addView(saveEmoji);
@@ -137,7 +134,7 @@ public class WeryGramPremiumActivity extends BaseFragment {
         divider2.setLayoutParams(new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 1));
         root.addView(divider2);
         TextView clearEmoji = new TextView(context);
-        clearEmoji.setText("\u274C \u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c emoji");
+        clearEmoji.setText("\u0421\u0431\u0440\u043e\u0441\u0438\u0442\u044c emoji");
         clearEmoji.setTextSize(android.util.TypedValue.COMPLEX_UNIT_SP, 16);
         clearEmoji.setTextColor(0xFFCC0000);
         clearEmoji.setPadding(AndroidUtilities.dp(16),AndroidUtilities.dp(14),AndroidUtilities.dp(16),AndroidUtilities.dp(14));
@@ -178,18 +175,12 @@ def patch_user_config(errors):
         f'{indent}    android.content.SharedPreferences __p = org.telegram.messenger.MessagesController.getGlobalMainSettings();\n'
         f'{indent}    if (currentUser != null && __p.getBoolean("wery_visual_premium", false)) {{\n'
         f'{indent}        currentUser.premium = true;\n'
-        f'{indent}        boolean __hasEmoji = false;\n'
-        f'{indent}        long __curEid = 0;\n'
-        f'{indent}        if (currentUser.emoji_status instanceof org.telegram.tgnet.TLRPC.TL_emojiStatus) {{\n'
-        f'{indent}            __curEid = ((org.telegram.tgnet.TLRPC.TL_emojiStatus) currentUser.emoji_status).document_id;\n'
-        f'{indent}            __hasEmoji = __curEid != 0;\n'
-        f'{indent}        }} else if (currentUser.emoji_status instanceof org.telegram.tgnet.TLRPC.TL_emojiStatusUntil) {{\n'
-        f'{indent}            __curEid = ((org.telegram.tgnet.TLRPC.TL_emojiStatusUntil) currentUser.emoji_status).document_id;\n'
-        f'{indent}            __hasEmoji = __curEid != 0;\n'
-        f'{indent}        }}\n'
-        f'{indent}        if (__hasEmoji && __curEid != __p.getLong("wery_emoji_id", 0)) {{\n'
-        f'{indent}            __p.edit().putLong("wery_emoji_id", __curEid).apply();\n'
-        f'{indent}        }} else if (!__hasEmoji) {{\n'
+        f'{indent}        boolean __hasEmoji = (currentUser.emoji_status instanceof org.telegram.tgnet.TLRPC.TL_emojiStatus)\n'
+        f'{indent}            && ((org.telegram.tgnet.TLRPC.TL_emojiStatus) currentUser.emoji_status).document_id != 0;\n'
+        f'{indent}        if (__hasEmoji) {{\n'
+        f'{indent}            long __curEid = ((org.telegram.tgnet.TLRPC.TL_emojiStatus) currentUser.emoji_status).document_id;\n'
+        f'{indent}            if (__curEid != __p.getLong("wery_emoji_id", 0)) __p.edit().putLong("wery_emoji_id", __curEid).apply();\n'
+        f'{indent}        }} else {{\n'
         f'{indent}            long __savedEid = __p.getLong("wery_emoji_id", 0);\n'
         f'{indent}            if (__savedEid != 0) {{\n'
         f'{indent}                org.telegram.tgnet.TLRPC.TL_emojiStatus __es = new org.telegram.tgnet.TLRPC.TL_emojiStatus();\n'
