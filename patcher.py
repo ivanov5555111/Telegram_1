@@ -38,7 +38,7 @@ def insert_after(path, marker, insertion):
     if marker not in text: print(f"✘ NOT FOUND: {marker!r}", file=sys.stderr); return False
     write(path, text.replace(marker, marker + "\n" + insertion, 1)); return True
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────[...]
 GIFTS_JAVA = '''\
 package org.telegram.ui;
 
@@ -187,7 +187,7 @@ public class WeryGramGifts {
 }
 '''
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────[...]
 ACTIVITY = '''\
 package org.telegram.ui;
 
@@ -272,7 +272,7 @@ public class WeryGramPremiumActivity extends BaseFragment {
             "wery_visual_premium", null);
         addRow(context, root,
             "\u0420\u0435\u0436\u0438\u043c \u041f\u0440\u0438\u0437\u0440\u0430\u043a\u0430",
-            "\u0412\u044b \u0431\u0443\u0434\u0435\u0442\u0435 \u0432 \u0441\u0442\u0430\u0442\u0443\u0441\u0435 \u043d\u0435\u0432\u0438\u0434\u0438\u043c\u043a\u0438, \u043f\u0440\u0438 \u043f\u0440\u043e\u0447\u0442\u0435\u043d\u0438\u0438 \u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440 \u043d\u0435 \u0437\u0430\u0441\u0447\u0438\u0442\u044b\u0432\u0430\u0435\u0442\u0441\u044f",
+            "\u0412\u044b \u0431\u0443\u0434\u0435\u0442\u0435 \u0432 \u0441\u0442\u0430\u0442\u0443\u0441\u0435 \u043d\u0435\u0432\u0438\u0434\u0438\u043c\u043a\u0438, \u043f\u0440\u0438 \u043f\u0440[...]
             "wery_ghost_mode", null);
         addRow(context, root,
             "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0435 \u043f\u043e\u0434\u0430\u0440\u043a\u0438",
@@ -285,7 +285,7 @@ public class WeryGramPremiumActivity extends BaseFragment {
 }
 '''
 
-# ─────────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────[...]
 
 def patch_user_config(errors):
     uc = find_file("UserConfig.java")
@@ -317,18 +317,18 @@ def patch_user_config(errors):
         f'{indent}        if(currentUser.profile_color!=null){{\n'
         f'{indent}            int __cc=currentUser.profile_color.color;long __ce=currentUser.profile_color.background_emoji_id;\n'
         f'{indent}            if(__cc>=0||__ce!=0){{__p.edit().putInt("wery_pcolor_id",__cc).putLong("wery_pcolor_emoji",__ce).apply();}}\n'
-        f'{indent}            else{{int __sp=__p.getInt("wery_pcolor_id",-1);long __se=__p.getLong("wery_pcolor_emoji",0);if(__sp>=0)currentUser.profile_color.color=__sp;if(__se!=0)currentUser.profile_color.background_emoji_id=__se;}}\n'
+        f'{indent}            else{{int __sp=__p.getInt("wery_pcolor_id",-1);long __se=__p.getLong("wery_pcolor_emoji",0);if(__sp>=0)currentUser.profile_color.color=__sp;if(__se!=0)currentUser.profile[...]
         f'{indent}        }}else{{\n'
         f'{indent}            int __sp=__p.getInt("wery_pcolor_id",-1);long __se=__p.getLong("wery_pcolor_emoji",0);\n'
-        f'{indent}            if(__sp>=0||__se!=0){{currentUser.profile_color=new org.telegram.tgnet.TLRPC.TL_peerColor();if(__sp>=0)currentUser.profile_color.color=__sp;currentUser.profile_color.background_emoji_id=__se;}}\n'
+        f'{indent}            if(__sp>=0||__se!=0){{currentUser.profile_color=new org.telegram.tgnet.TLRPC.TL_peerColor();if(__sp>=0)currentUser.profile_color.color=__sp;currentUser.profile_color.back[...]
         f'{indent}        }}\n'
         f'{indent}        if(currentUser.color!=null){{\n'
         f'{indent}            int __nc=currentUser.color.color;long __ne=currentUser.color.background_emoji_id;\n'
         f'{indent}            if(__nc>=0||__ne!=0){{__p.edit().putInt("wery_color_id",__nc).putLong("wery_color_emoji",__ne).apply();}}\n'
-        f'{indent}            else{{int __sc=__p.getInt("wery_color_id",-1);long __sce=__p.getLong("wery_color_emoji",0);if(__sc>=0)currentUser.color.color=__sc;if(__sce!=0)currentUser.color.background_emoji_id=__sce;}}\n'
+        f'{indent}            else{{int __sc=__p.getInt("wery_color_id",-1);long __sce=__p.getLong("wery_color_emoji",0);if(__sc>=0)currentUser.color.color=__sc;if(__sce!=0)currentUser.color.backgroun[...]
         f'{indent}        }}else{{\n'
         f'{indent}            int __sc=__p.getInt("wery_color_id",-1);long __sce=__p.getLong("wery_color_emoji",0);\n'
-        f'{indent}            if(__sc>=0||__sce!=0){{currentUser.color=new org.telegram.tgnet.TLRPC.TL_peerColor();if(__sc>=0)currentUser.color.color=__sc;currentUser.color.background_emoji_id=__sce;}}\n'
+        f'{indent}            if(__sc>=0||__sce!=0){{currentUser.color=new org.telegram.tgnet.TLRPC.TL_peerColor();if(__sc>=0)currentUser.color.color=__sc;currentUser.color.background_emoji_id=__sce;}[...]
         f'{indent}        }}\n'
         f'{indent}    }}\n'
         f'{indent}}} catch (Exception __e) {{}}\n'
@@ -411,7 +411,7 @@ def patch_stars_controller(errors):
     m = next((x for x in ["giftsLoaded = true;","this.giftsLoaded = true;"] if x in text), None)
     if m:
         write(sc, text.replace(m,
-            m+"\n        if(org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean(\"wery_deleted_gifts\",false)){org.telegram.ui.WeryGramGifts.reset();org.telegram.ui.WeryGramGifts.injectDeletedGifts(currentAccount);} //wery_deleted_gifts",1))
+            m+"\n        if(org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean(\"wery_deleted_gifts\",false)){org.telegram.ui.WeryGramGifts.reset();org.telegram.ui.WeryGramGi[...]
         print("✔ StarsController: deleted gifts patch")
     else:
         print("⚠ StarsController: giftsLoaded marker не найден")
@@ -487,7 +487,7 @@ def main():
     else:
         print("✘ fillItems не найден", file=sys.stderr); errors += 1
 
-    # ── Обработчик клика ──────────────────────────────────────────────────────
+    # ── Обработчик клика ───────────────────────────────────────────────────────
     click_anchors = [
         "void onItemClick(UItem item, View view, int position, float x, float y) {",
         "public void onItemClick(UItem item, View view, int position, float x, float y) {",
@@ -507,7 +507,7 @@ def main():
     else:
         print("✘ onClick не найден", file=sys.stderr); errors += 1
 
-    # ── Java файлы ────────────────────────────────────────────────────────────
+    # ── Java файлы ─────────────────────────────────────────────────────────────
     ui_dir = os.path.dirname(sa)
     for fname, content in [
         ("WeryGramPremiumActivity.java", ACTIVITY),
