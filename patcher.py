@@ -53,6 +53,8 @@ import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_payments;
+import org.telegram.tgnet.tl.TL_stars;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -121,15 +123,9 @@ public class WeryGramGifts {
         if (!MessagesController.getGlobalMainSettings().getBoolean("wery_rating_farm", false)) return;
 
         try {
-            TLRPC.TL_payments_sendStarGift req = new TLRPC.TL_payments_sendStarGift();
-            req.flags = 0;
-            
-            TLRPC.TL_inputUser userPeer = new TLRPC.TL_inputUser();
-            userPeer.user_id = durov.id;
-            userPeer.access_hash = durov.access_hash;
-            req.user_id = userPeer;
-            
-            req.star_gift_id = BEAR_GIFT_ID;
+            TL_stars.sendStarGift req = new TL_stars.sendStarGift();
+            req.gift_id = BEAR_GIFT_ID;
+            req.user_id = MessagesController.getInstance(account).getInputUser(durov.id);
             req.text = "";
             req.upgrade_stars = false;
 
@@ -549,7 +545,7 @@ def patch_stars_controller(errors):
     if 'wery_deleted_gifts' in text: print("↩ skip StarsController"); return errors
     m = next((x for x in ["giftsLoaded = true;","this.giftsLoaded = true;"] if x in text), None)
     if m:
-        injection = m + '\n        if (org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("wery_deleted_gifts", false)) { org.telegram.ui.WeryGramGifts.reset(); org.telegram.ui.WeryGramGifts.injectDeletedGifts(account); }'
+        injection = m + '\n        if (currentAccount >= 0 && org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("wery_deleted_gifts", false)) { org.telegram.ui.WeryGramGifts.reset(); org.telegram.ui.WeryGramGifts.injectDeletedGifts(currentAccount); }'
         write(sc, text.replace(m, injection))
         print("✔ StarsController: deleted gifts patch")
     else:
@@ -637,7 +633,7 @@ def patch_app_icon(errors):
         
         match = re_mod.search(r'<meta property="og:image" content="(https://i\.ibb\.co/[^"]+)"', html)
         if not match:
-            print("⚠ Не удалось найти прямую ссылку на аватарку")
+            print("⚠ Не уда��ось найти прямую ссылку на аватарку")
             return errors
         
         img_url = match.group(1)
