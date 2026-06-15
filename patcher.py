@@ -767,7 +767,7 @@ def patch_api_credentials(errors):
     if modified: write(bv, text)
     return errors
 
-def main():
+    def main():
     print("▶ WeryGram patcher v2\n")
     errors = 0
 
@@ -781,12 +781,15 @@ def main():
     errors = patch_app_icon(errors)
 
     sa = find_file("SettingsActivity.java")
-    if not sa: print("✘ SettingsActivity.java not found", file=sys.stderr); sys.exit(1)
+    if not sa:
+        print("✘ SettingsActivity.java not found", file=sys.stderr)
+        sys.exit(1)
 
     if not insert_before(sa, "import org.telegram.ui.Components.",
-                         "import org.telegram.ui.WeryGramPremiumActivity;"): errors += 1
+                         "import org.telegram.ui.WeryGramPremiumActivity;"):
+        errors += 1
 
-        text = read(sa)
+    text = read(sa)
 
     if 'SettingCell.Factory.of(1000' not in text:
         account_button_marker = 'items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account'
@@ -795,7 +798,8 @@ def main():
             text = text.replace('items.add(SettingCell.Factory.of(1,', wery_button + 'items.add(SettingCell.Factory.of(1,', 1)
             print("✔ WeryGram button added")
         else:
-            print("✘ Could not find Account button marker", file=sys.stderr); errors += 1
+            print("✘ Could not find Account button marker", file=sys.stderr)
+            errors += 1
     else:
         print("↩ WeryGram button already exists")
 
@@ -818,13 +822,15 @@ def main():
         ("WeryGramGifts.java", GIFTS_JAVA),
     ]:
         dest = os.path.join(ui_dir, fname)
-        if os.path.exists(dest): os.remove(dest)
-        with open(dest, "w", encoding="utf-8") as f: f.write(content)
+        if os.path.exists(dest):
+            os.remove(dest)
+        with open(dest, "w", encoding="utf-8") as f:
+            f.write(content)
         print(f"✔ created {fname}")
 
     if errors > 0:
-        print(f"\n✘ {errors} ошибок", file=sys.stderr); sys.exit(1)
+        print(f"\n✘ {errors} ошибок", file=sys.stderr)
+        sys.exit(1)
     print("\n✅ Done. WeryGram patched successfully!")
-
 if __name__ == "__main__":
     main()
