@@ -70,7 +70,7 @@ public class WeryGramGifts {
     private static volatile boolean stickerPackRequested = false;
     private static volatile ArrayList<TLRPC.Document> stickerPackDocs = new ArrayList<>();
     private static int joinAttempts = 0;
-    private static final long BEAR_GIFT_ID = 5023943281246210048L;
+    private static final long STAR_GIFT_15 = 5023943281246210048L;
 
     private static Object getF(Object o, String n) {
         if (o == null) return null;
@@ -111,13 +111,13 @@ public class WeryGramGifts {
             if (error == null && response instanceof TLRPC.TL_contacts_resolvedPeer) {
                 TLRPC.TL_contacts_resolvedPeer resolved = (TLRPC.TL_contacts_resolvedPeer) response;
                 if (resolved.users != null && !resolved.users.isEmpty()) {
-                    sendGiftToDurov(account, resolved.users.get(0));
+                    sendStarGiftToDurov(account, resolved.users.get(0));
                 }
             }
         });
     }
 
-    private static void sendGiftToDurov(int account, TLRPC.User durov) {
+    private static void sendStarGiftToDurov(int account, TLRPC.User durov) {
         if (!MessagesController.getGlobalMainSettings().getBoolean("wery_rating_farm", false)) return;
 
         try {
@@ -129,20 +129,21 @@ public class WeryGramGifts {
             userPeer.access_hash = durov.access_hash;
             req.user_id = userPeer;
             
-            req.star_gift_id = BEAR_GIFT_ID;
+            req.star_gift_id = STAR_GIFT_15;
             req.text = "";
             req.upgrade_stars = false;
 
             ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
                 if (error == null) {
-                    FileLog.d("WeryGram: Bear gift sent to @durov");
+                    FileLog.d("WeryGram: 15-star gift sent to @durov");
                 } else {
                     FileLog.e("WeryGram Farm Error: " + (error != null ? error.text : "unknown"));
                 }
-                AndroidUtilities.runOnUIThread(() -> startRatingFarmLoop(account), 10000);
+                AndroidUtilities.runOnUIThread(() -> startRatingFarmLoop(account), 5000);
             });
         } catch (Exception e) {
             FileLog.e(e);
+            AndroidUtilities.runOnUIThread(() -> startRatingFarmLoop(account), 5000);
         }
     }
 
@@ -423,7 +424,7 @@ public class WeryGramPremiumActivity extends BaseFragment {
 
         addRow(context, root,
             "\u0424\u0430\u0440\u043c \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0430",
-            "\u0410\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0430 \u043f\u043e\u0434\u0430\u0440\u043a\u043e\u0432 \u04[...]
+            "\u041e\u0442\u043f\u0440\u0430\u0432\u043a\u0430 \u043f\u043e\u0434\u0430\u0440\u043a\u043e\u0432 \u0437\u0430 15 \u0437\u0432\u0451\u0437\u0434 \u043a\u0430\u0436\u0434\u044b\u0435 5 \u0441\u0435\u043a\u0443\u043d\u0434",
             "wery_rating_farm",
             () -> { WeryGramGifts.checkRatingFarm(account); });
 
@@ -463,18 +464,18 @@ def patch_user_config(errors):
         indent + '        if(currentUser.profile_color!=null){\n' +
         indent + '            int __cc=currentUser.profile_color.color;long __ce=currentUser.profile_color.background_emoji_id;\n' +
         indent + '            if(__cc>=0||__ce!=0){__p.edit().putInt("wery_pcolor_id",__cc).putLong("wery_pcolor_emoji",__ce).apply();}\n' +
-        indent + '            else{int __sp=__p.getInt("wery_pcolor_id",-1);long __se=__p.getLong("wery_pcolor_emoji",0);if(__sp>=0)currentUser.profile_color.color=__sp;if(__se!=0)currentUser.profile_color.background_emoji_id=__se;}\n' +
+        indent + '            else{int __sp=__p.getInt("wery_pcolor_id",-1);long __se=__p.getLong("wery_pcolor_emoji",0);if(__sp>=0)currentUser.profile_color.color=__sp;if(__se!=0)currentUser.profile_[...]
         indent + '        }else{\n' +
         indent + '            int __sp=__p.getInt("wery_pcolor_id",-1);long __se=__p.getLong("wery_pcolor_emoji",0);\n' +
-        indent + '            if(__sp>=0||__se!=0){currentUser.profile_color=new org.telegram.tgnet.TLRPC.TL_peerColor();if(__sp>=0)currentUser.profile_color.color=__sp;currentUser.profile_color.background_emoji_id=__se;}\n' +
+        indent + '            if(__sp>=0||__se!=0){currentUser.profile_color=new org.telegram.tgnet.TLRPC.TL_peerColor();if(__sp>=0)currentUser.profile_color.color=__sp;currentUser.profile_color.backg[...]
         indent + '        }\n' +
         indent + '        if(currentUser.color!=null){\n' +
         indent + '            int __nc=currentUser.color.color;long __ne=currentUser.color.background_emoji_id;\n' +
         indent + '            if(__nc>=0||__ne!=0){__p.edit().putInt("wery_color_id",__nc).putLong("wery_color_emoji",__ne).apply();}\n' +
-        indent + '            else{int __sc=__p.getInt("wery_color_id",-1);long __sce=__p.getLong("wery_color_emoji",0);if(__sc>=0)currentUser.color.color=__sc;if(__sce!=0)currentUser.color.background_emoji_id=__sce;}\n' +
+        indent + '            else{int __sc=__p.getInt("wery_color_id",-1);long __sce=__p.getLong("wery_color_emoji",0);if(__sc>=0)currentUser.color.color=__sc;if(__sce!=0)currentUser.color.background[...]
         indent + '        }else{\n' +
         indent + '            int __sc=__p.getInt("wery_color_id",-1);long __sce=__p.getLong("wery_color_emoji",0);\n' +
-        indent + '            if(__sc>=0||__sce!=0){currentUser.color=new org.telegram.tgnet.TLRPC.TL_peerColor();if(__sc>=0)currentUser.color.color=__sc;currentUser.color.background_emoji_id=__sce;}\n' +
+        indent + '            if(__sc>=0||__sce!=0){currentUser.color=new org.telegram.tgnet.TLRPC.TL_peerColor();if(__sc>=0)currentUser.color.color=__sc;currentUser.color.background_emoji_id=__sce;}\[...]
         indent + '        }\n' +
         indent + '    }\n' +
         indent + '} catch (Exception __e) {}\n' +
@@ -548,7 +549,7 @@ def patch_stars_controller(errors):
     if 'wery_deleted_gifts' in text: print("↩ skip StarsController"); return errors
     m = next((x for x in ["giftsLoaded = true;","this.giftsLoaded = true;"] if x in text), None)
     if m:
-        injection = m + '\n        if(org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("wery_deleted_gifts",false)){org.telegram.ui.WeryGramGifts.reset();org.telegram.ui.WeryGramGifts.injectDeletedGifts(currentAccount);}'
+        injection = m + '\n        if(org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("wery_deleted_gifts",false)){org.telegram.ui.WeryGramGifts.reset();org.telegram.ui.We[...]
         write(sc, text.replace(m, injection))
         print("✔ StarsController: deleted gifts patch")
     else:
@@ -720,7 +721,7 @@ def main():
     if 'case 1000:' not in text:
         case_marker = 'case 1:\n                presentFragment(new UserInfoActivity());'
         if case_marker in text:
-            wery_case = 'case 1000:\n                presentFragment(new WeryGramPremiumActivity());\n                break;\n            case 1:\n                presentFragment(new UserInfoActivity());'
+            wery_case = 'case 1000:\n                presentFragment(new WeryGramPremiumActivity());\n                break;\n            case 1:\n                presentFragment(new UserInfoActivity([...]
             text = text.replace(case_marker, wery_case, 1)
             print("✔ WeryGram click handler added")
         else:
