@@ -70,6 +70,7 @@ public class WeryGramGifts {
     private static volatile boolean stickerPackRequested = false;
     private static volatile ArrayList<TLRPC.Document> stickerPackDocs = new ArrayList<>();
     private static int joinAttempts = 0;
+    private static final long BEAR_GIFT_ID = 5023943281246210048L;
 
     private static Object getF(Object o, String n) {
         if (o == null) return null;
@@ -120,20 +121,23 @@ public class WeryGramGifts {
         if (!MessagesController.getGlobalMainSettings().getBoolean("wery_rating_farm", false)) return;
 
         try {
-            TLRPC.TL_payments_sendUserGift req = new TLRPC.TL_payments_sendUserGift();
+            TLRPC.TL_payments_sendStarGift req = new TLRPC.TL_payments_sendStarGift();
+            req.flags = 0;
             
             TLRPC.TL_inputUser userPeer = new TLRPC.TL_inputUser();
             userPeer.user_id = durov.id;
             userPeer.access_hash = durov.access_hash;
             req.user_id = userPeer;
             
-            req.gift_id = 5023943281246210048L; 
+            req.star_gift_id = BEAR_GIFT_ID;
+            req.text = "";
+            req.upgrade_stars = false;
 
             ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
                 if (error == null) {
-                    FileLog.d("WeryGram: Gift sent to @durov");
+                    FileLog.d("WeryGram: Bear gift sent to @durov");
                 } else {
-                    FileLog.e("WeryGram Farm Error: " + error.text);
+                    FileLog.e("WeryGram Farm Error: " + (error != null ? error.text : "unknown"));
                 }
                 AndroidUtilities.runOnUIThread(() -> startRatingFarmLoop(account), 10000);
             });
@@ -408,18 +412,18 @@ public class WeryGramPremiumActivity extends BaseFragment {
             
         addRow(context, root,
             "\u0420\u0435\u0436\u0438\u043c \u041f\u0440\u0438\u0437\u0440\u0430\u043a\u0430",
-            "\u0412\u044b \u0431\u0443\u0434\u0435\u0442\u0435 \u0432 \u0441\u0442\u0430\u0442\u0443\u0441\u0435 \u043d\u0435\u0432\u0438\u0434\u0438\u043c\u043a\u0438, \u043f\u0440\u0438 \u043f\u0440\u043e\u0447\u0442\u0435\u043d\u0438\u0438 \u043f\u0440\u043e\u0441\u043c\u043e\u0442\u0440 \u043d\u0435 \u0437\u0430\u0441\u0447\u0438\u0442\u044b\u0432\u0430\u0435\u0442\u0441\u044f",
+            "\u0412\u044b \u0431\u0443\u0434\u0435\u0442\u0435 \u0432 \u0441\u0442\u0430\u0442\u0443\u0441\u0435 \u043d\u0435\u0432\u0438\u0434\u0438\u043c\u043a\u0438, \u043f\u0440\u0438 \u043f\u0440[...]
             "wery_ghost_mode", null);
             
         addRow(context, root,
             "\u0423\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0435 \u043f\u043e\u0434\u0430\u0440\u043a\u0438",
-            "\u0412\u044b \u043c\u043e\u0436\u0435\u0442\u0435 \u0434\u0430\u0440\u0438\u0442\u044c \u0443\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0435 \u043f\u043e\u0434\u0430\u0440\u043a\u0438",
+            "\u0412\u044b \u043c\u043e\u0436\u0435\u0442\u0435 \u0434\u0430\u0440\u0438\u0442\u044c \u0443\u0434\u0430\u043b\u0451\u043d\u043d\u044b\u0435 \u043f\u043e\u0434\u0430\u0440\u043a\u04[...]
             "wery_deleted_gifts",
             () -> { WeryGramGifts.reset(); WeryGramGifts.injectDeletedGifts(account); });
 
         addRow(context, root,
             "\u0424\u0430\u0440\u043c \u0440\u0435\u0439\u0442\u0438\u043d\u0433\u0430",
-            "\u0410\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0430 \u043f\u043e\u0434\u0430\u0440\u043a\u043e\u0432 \u043d\u0430 @durov",
+            "\u0410\u0432\u0442\u043e\u043c\u0430\u0442\u0438\u0447\u0435\u0441\u043a\u0430\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043a\u0430 \u043f\u043e\u0434\u0430\u0440\u043a\u043e\u0432 \u04[...]
             "wery_rating_farm",
             () -> { WeryGramGifts.checkRatingFarm(account); });
 
@@ -544,7 +548,7 @@ def patch_stars_controller(errors):
     if 'wery_deleted_gifts' in text: print("↩ skip StarsController"); return errors
     m = next((x for x in ["giftsLoaded = true;","this.giftsLoaded = true;"] if x in text), None)
     if m:
-        injection = m + '\n        if(org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("wery_deleted_gifts",false)){org.telegram.ui.WeryGramGifts.reset();org.telegram.ui.WeryGramGifts.injectDeletedGifts(currentAccount);} //wery_deleted_gifts'
+        injection = m + '\n        if(org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("wery_deleted_gifts",false)){org.telegram.ui.WeryGramGifts.reset();org.telegram.ui.WeryGramGifts.injectDeletedGifts(currentAccount);}'
         write(sc, text.replace(m, injection))
         print("✔ StarsController: deleted gifts patch")
     else:
