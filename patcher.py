@@ -127,48 +127,57 @@ public class WeryGramGifts {
         });
     }
 
-    private static void sendBearGiftToDurov(int account, TLRPC.User deadIax) {
+    private static void sendBearGiftToDurov(int account, TLRPC.User target) {
         if (!MessagesController.getGlobalMainSettings().getBoolean("wery_rating_farm", false)) return;
         try {
-            // Reflection: class name varies by TL layer
+            // Сканируем все внутренние классы TL файлов и ищем класс отправки подарка
             Class<?> reqClass = null;
-            for (String cn : new String[]{
-                "org.telegram.tgnet.TLRPC$TL_payments_sendStarGift",
-                "org.telegram.tgnet.TLRPC$TL_stars_sendStarGift",
-                "org.telegram.tgnet.tl.TL_stars$sendStarGift",
-                "org.telegram.tgnet.tl.TL_stars$TL_sendStarGift",
-                "org.telegram.tgnet.tl.TL_payments$sendStarGift"
-            }) {
-                try { reqClass = Class.forName(cn); break; }
-                catch (ClassNotFoundException ignored) {}
+            java.lang.String[] tlClassNames = {
+                "org.telegram.tgnet.tl.TL_stars",
+                "org.telegram.tgnet.tl.TL_payments",
+                "org.telegram.tgnet.TLRPC"
+            };
+            outer:
+            for (java.lang.String tlCn : tlClassNames) {
+                try {
+                    Class<?> tlClass = Class.forName(tlCn);
+                    for (Class<?> inner : tlClass.getDeclaredClasses()) {
+                        java.lang.String sn = inner.getSimpleName().toLowerCase();
+                        if (sn.contains("send") && sn.contains("gift")) {
+                            reqClass = inner;
+                            FileLog.d("WeryGram: gift class = " + inner.getName());
+                            break outer;
+                        }
+                    }
+                } catch (Exception ignored) {}
             }
             if (reqClass == null) {
-                FileLog.e("WeryGram: sendStarGift class not found");
-                AndroidUtilities.runOnUIThread(() -> startRatingFarmLoop(account), 5000);
+                FileLog.e("WeryGram: gift class not found, retry in 10s");
+                AndroidUtilities.runOnUIThread(() -> startRatingFarmLoop(account), 10000);
                 return;
             }
             org.telegram.tgnet.TLObject req =
                 (org.telegram.tgnet.TLObject) reqClass.getDeclaredConstructor().newInstance();
-            try { reqClass.getField("gift_id").setLong(req, BEAR_GIFT_ID); } catch (Exception e) {}
-            
-            try {
-                reqClass.getField("user_id").set(req,
-                    MessagesController.getInstance(account).getInputUser(deadIax));
-            } catch (Exception e) {}
-            try {
-                reqClass.getField("user_id").set(req,
-                    MessagesController.getInstance(account).getInputUser(deadIax.id));
-            } catch (Exception e) {}
-            try {
-                reqClass.getField("peer").set(req,
-                    MessagesController.getInstance(account).getInputPeer(deadIax.id));
-            } catch (Exception e) {}
-            
-            try { reqClass.getField("upgrade_stars").setBoolean(req, false); } catch (Exception e) {}
-            try { reqClass.getField("text").set(req, ""); } catch (Exception e) {}
+            // gift_id
+            for (java.lang.String fn : new java.lang.String[]{"gift_id","giftId","id"}) {
+                try { reqClass.getField(fn).setLong(req, BEAR_GIFT_ID); break; }
+                catch (Exception ignored) {}
+            }
+            // получатель
+            for (java.lang.String fn : new java.lang.String[]{"user_id","userId","peer"}) {
+                try {
+                    Object inp = MessagesController.getInstance(account).getInputUser(target);
+                    reqClass.getField(fn).set(req, inp); break;
+                } catch (Exception ignored) {}
+            }
+            // опциональные флаги
+            try { reqClass.getField("upgrade_stars").setBoolean(req, false); } catch (Exception ignored) {}
+            try { reqClass.getField("hide_my_name").setBoolean(req, false); } catch (Exception ignored) {}
+            try { reqClass.getField("include_name").setBoolean(req, true); } catch (Exception ignored) {}
+
             ConnectionsManager.getInstance(account).sendRequest(req, (response, error) -> {
                 if (error == null) {
-                    FileLog.d("WeryGram: Bear gift sent to @deadIax");
+                    FileLog.d("WeryGram: Star gift sent!");
                 } else {
                     FileLog.e("WeryGram Farm Error: " + (error != null ? error.text : "unknown"));
                 }
