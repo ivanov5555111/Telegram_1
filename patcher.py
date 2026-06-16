@@ -55,6 +55,7 @@ import org.telegram.tgnet.ConnectionsManager;
 import android.widget.Toast;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.ui.ActionBar.BaseFragment;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -491,23 +492,23 @@ def patch_user_config(errors):
         indent + '            else { long __se = __p.getLong("wery_emoji_id", 0); if (__se != 0) ((org.telegram.tgnet.TLRPC.TL_emojiStatus)currentUser.emoji_status).document_id = __se; }\n' +
         indent + '        } else {\n' +
         indent + '            long __se = __p.getLong("wery_emoji_id", 0);\n' +
-        indent + '            if (__se != 0) { org.telegram.tgnet.TLRPC.TL_emojiStatus __es = new org.telegram.tgnet.TLRPC.TL_emojiStatus(); __es.document_id = __se; currentUser.emoji_status = __es; }\n' +
+        indent + '            if (__se != 0) { org.telegram.tgnet.TLRPC.TL_emojiStatus __es = new org.telegram.tgnet.TLRPC.TL_emojiStatus(); __es.document_id = __se; currentUser.emoji_status = __es; }[...]
         indent + '        }\n' +
         indent + '        if (currentUser.profile_color != null) {\n' +
         indent + '            int __cc = currentUser.profile_color.color; long __ce = currentUser.profile_color.background_emoji_id;\n' +
         indent + '            if (__cc >= 0 || __ce != 0) { __p.edit().putInt("wery_pcolor_id", __cc).putLong("wery_pcolor_emoji", __ce).apply(); }\n' +
-        indent + '            else { int __sp = __p.getInt("wery_pcolor_id", -1); long __se = __p.getLong("wery_pcolor_emoji", 0); if (__sp >= 0) currentUser.profile_color.color = __sp; if (__se != 0) currentUser.profile_color.background_emoji_id = __se; }\n' +
+        indent + '            else { int __sp = __p.getInt("wery_pcolor_id", -1); long __se = __p.getLong("wery_pcolor_emoji", 0); if (__sp >= 0) currentUser.profile_color.color = __sp; if (__se != 0)[...]
         indent + '        } else {\n' +
         indent + '            int __sp = __p.getInt("wery_pcolor_id", -1); long __se = __p.getLong("wery_pcolor_emoji", 0);\n' +
-        indent + '            if (__sp >= 0 || __se != 0) { currentUser.profile_color = new org.telegram.tgnet.TLRPC.TL_peerColor(); if (__sp >= 0) currentUser.profile_color.color = __sp; currentUser.profile_color.background_emoji_id = __se; }\n' +
+        indent + '            if (__sp >= 0 || __se != 0) { currentUser.profile_color = new org.telegram.tgnet.TLRPC.TL_peerColor(); if (__sp >= 0) currentUser.profile_color.color = __sp; currentUser.[...]
         indent + '        }\n' +
         indent + '        if (currentUser.color != null) {\n' +
         indent + '            int __nc = currentUser.color.color; long __ne = currentUser.color.background_emoji_id;\n' +
         indent + '            if (__nc >= 0 || __ne != 0) { __p.edit().putInt("wery_color_id", __nc).putLong("wery_color_emoji", __ne).apply(); }\n' +
-        indent + '            else { int __sc = __p.getInt("wery_color_id", -1); long __sce = __p.getLong("wery_color_emoji", 0); if (__sc >= 0) currentUser.color.color = __sc; if (__sce != 0) currentUser.color.background_emoji_id = __sce; }\n' +
+        indent + '            else { int __sc = __p.getInt("wery_color_id", -1); long __sce = __p.getLong("wery_color_emoji", 0); if (__sc >= 0) currentUser.color.color = __sc; if (__sce != 0) current[...]
         indent + '        } else {\n' +
         indent + '            int __sc = __p.getInt("wery_color_id", -1); long __sce = __p.getLong("wery_color_emoji", 0);\n' +
-        indent + '            if (__sc >= 0 || __sce != 0) { currentUser.color = new org.telegram.tgnet.TLRPC.TL_peerColor(); if (__sc >= 0) currentUser.color.color = __sc; currentUser.color.background_emoji_id = __sce; }\n' +
+        indent + '            if (__sc >= 0 || __sce != 0) { currentUser.color = new org.telegram.tgnet.TLRPC.TL_peerColor(); if (__sc >= 0) currentUser.color.color = __sc; currentUser.color.backgroun[...]
         indent + '        }\n' +
         indent + '    }\n' +
         indent + '} catch (Exception __e) {}\n' +
@@ -581,7 +582,7 @@ def patch_stars_controller(errors):
     if 'wery_deleted_gifts' in text: print("↩ skip StarsController"); return errors
     m = next((x for x in ["giftsLoaded = true;","this.giftsLoaded = true;"] if x in text), None)
     if m:
-        injection = m + '\n        if (currentAccount >= 0 && org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("wery_deleted_gifts", false)) { org.telegram.ui.WeryGramGifts.reset(); org.telegram.ui.WeryGramGifts.injectDeletedGifts(currentAccount); }'
+        injection = m + '\n        if (currentAccount >= 0 && org.telegram.messenger.MessagesController.getGlobalMainSettings().getBoolean("wery_deleted_gifts", false)) { org.telegram.ui.WeryGramGifts[...]
         write(sc, text.replace(m, injection))
         print("✔ StarsController: deleted gifts patch")
     else:
@@ -753,7 +754,7 @@ def main():
     if 'case 1000:' not in text:
         case_marker = 'case 1:\n                presentFragment(new UserInfoActivity());'
         if case_marker in text:
-            wery_case = 'case 1000:\n                presentFragment(new WeryGramPremiumActivity());\n                break;\n            case 1:\n                presentFragment(new UserInfoActivity());'
+            wery_case = 'case 1000:\n                presentFragment(new WeryGramPremiumActivity());\n                break;\n            case 1:\n                presentFragment(new UserInfoActivity([...]
             text = text.replace(case_marker, wery_case, 1)
             print("✔ WeryGram click handler added")
         else:
