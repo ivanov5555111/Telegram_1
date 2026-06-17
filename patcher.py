@@ -56,6 +56,7 @@ import android.widget.Toast;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.Gifts.SendGiftSheet;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -134,44 +135,27 @@ public class WeryGramGifts {
                         farmTarget = resolved.users.get(0);
                         MessagesController.getInstance(account).putUsers(resolved.users, false);
                         toast("Получатель найден: @" + farmTarget.username);
-                        openTelegramGiftsDialog(account, farmTarget, LaunchActivity.getSafeLastFragment());
+                        openTelegramGiftsDialog(account, farmTarget);
                         return;
                     }
                 }
                 toast("Получатель не найден");
             });
         } else {
-            openTelegramGiftsDialog(account, farmTarget, LaunchActivity.getSafeLastFragment());
+            openTelegramGiftsDialog(account, farmTarget);
         }
     }
 
-    private static void openTelegramGiftsDialog(int account, TLRPC.User target, BaseFragment fragment) {
+    private static void openTelegramGiftsDialog(int account, TLRPC.User target) {
         AndroidUtilities.runOnUIThread(() -> {
             try {
-                BaseFragment currentFragment = fragment;
+                BaseFragment currentFragment = LaunchActivity.getSafeLastFragment();
                 if (currentFragment == null) {
-                    currentFragment = LaunchActivity.getSafeLastFragment();
+                    toast("Ошибка: фрагмент не найден");
+                    return;
                 }
                 
-                Class<?> cls = Class.forName("org.telegram.ui.Gifts.GiftSheet");
-                
-                java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(
-                    android.content.Context.class, 
-                    TLRPC.User.class, 
-                    org.telegram.ui.ActionBar.Theme.ResourcesProvider.class, 
-                    boolean.class
-                );
-                c.setAccessible(true);
-                
-                Object sheet = c.newInstance(
-                    currentFragment.getParentActivity(), 
-                    target, 
-                    null,
-                    true
-                );
-                
-                java.lang.reflect.Method m = sheet.getClass().getMethod("show");
-                m.invoke(sheet);
+                new SendGiftSheet(currentFragment.getParentActivity(), account, null, target.id, () -> {}).show();
                 
             } catch (Exception e) {
                 FileLog.e("WeryGram: Ошибка вызова Gifts: " + e);
@@ -755,4 +739,4 @@ def main():
     print("\n✅ Done. WeryGram patched successfully!")
 
 if __name__ == "__main__":
-    main()
+    main()     
