@@ -153,11 +153,8 @@ public class WeryGramGifts {
                     currentFragment = LaunchActivity.getSafeLastFragment();
                 }
                 
-                // Используем правильный путь к официальному листу подарков
                 Class<?> cls = Class.forName("org.telegram.ui.Gifts.GiftSheet");
                 
-                // Ищем конструктор: (Context, User, ResourcesProvider, boolean)
-                // Это стандартная сигнатура для официального окна подарков
                 java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(
                     android.content.Context.class, 
                     TLRPC.User.class, 
@@ -166,15 +163,13 @@ public class WeryGramGifts {
                 );
                 c.setAccessible(true);
                 
-                // Создаем инстанс с нужными параметрами
                 Object sheet = c.newInstance(
                     currentFragment.getParentActivity(), 
                     target, 
-                    null, // ResourcesProvider
-                    true  // isOut
+                    null,
+                    true
                 );
                 
-                // Вызываем метод show()
                 java.lang.reflect.Method m = sheet.getClass().getMethod("show");
                 m.invoke(sheet);
                 
