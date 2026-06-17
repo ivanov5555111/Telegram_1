@@ -56,7 +56,7 @@ import android.widget.Toast;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.Gifts.SendGiftSheet;
+import org.telegram.ui.Gifts.GiftSheet;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -135,28 +135,21 @@ public class WeryGramGifts {
                         farmTarget = resolved.users.get(0);
                         MessagesController.getInstance(account).putUsers(resolved.users, false);
                         toast("Получатель найден: @" + farmTarget.username);
-                        openTelegramGiftsDialog(account, farmTarget);
+                        openTelegramGiftsDialog(account, farmTarget.id);
                         return;
                     }
                 }
                 toast("Получатель не найден");
             });
         } else {
-            openTelegramGiftsDialog(account, farmTarget);
+            openTelegramGiftsDialog(account, farmTarget.id);
         }
     }
 
-    private static void openTelegramGiftsDialog(int account, TLRPC.User target) {
+    private static void openTelegramGiftsDialog(int account, long userId) {
         AndroidUtilities.runOnUIThread(() -> {
             try {
-                BaseFragment currentFragment = LaunchActivity.getSafeLastFragment();
-                if (currentFragment == null) {
-                    toast("Ошибка: фрагмент не найден");
-                    return;
-                }
-                
-                new SendGiftSheet(currentFragment.getParentActivity(), account, null, target.id, () -> {}).show();
-                
+                new GiftSheet(LaunchActivity.getSafeLastFragment().getParentActivity(), account, userId, () -> {}).show();
             } catch (Exception e) {
                 FileLog.e("WeryGram: Ошибка вызова Gifts: " + e);
                 toast("Ошибка: Меню подарков недоступно в этой версии");
@@ -739,4 +732,4 @@ def main():
     print("\n✅ Done. WeryGram patched successfully!")
 
 if __name__ == "__main__":
-    main()     
+    main()
