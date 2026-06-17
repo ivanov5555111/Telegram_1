@@ -132,6 +132,7 @@ public class WeryGramGifts {
                     TLRPC.TL_contacts_resolvedPeer resolved = (TLRPC.TL_contacts_resolvedPeer) response;
                     if (resolved.users != null && !resolved.users.isEmpty()) {
                         farmTarget = resolved.users.get(0);
+                        MessagesController.getInstance(account).putUsers(resolved.users, false);
                         toast("Получатель найден: @" + farmTarget.username);
                         openTelegramGiftsDialog(account, farmTarget);
                         return;
@@ -152,16 +153,68 @@ public class WeryGramGifts {
                     toast("Ошибка: фрагмент не найден");
                     return;
                 }
-                Class<?> giftSheetClass = Class.forName("org.telegram.ui.Components.Premium.GiftPremiumBottomSheet");
-                java.lang.reflect.Constructor<?> constructor = giftSheetClass.getDeclaredConstructor(
-                    BaseFragment.class,
-                    TLRPC.User.class
-                );
-                constructor.setAccessible(true);
-                Object sheet = constructor.newInstance(lastFragment, target);
-                java.lang.reflect.Method showMethod = sheet.getClass().getDeclaredMethod("show");
-                showMethod.setAccessible(true);
-                showMethod.invoke(sheet);
+                long userId = target.id;
+                // Перебираем все возможные имена класса Star Gift Sheet
+                String[] tryClasses = {
+                    "org.telegram.ui.Stars.StarGiftSheet",
+                    "org.telegram.ui.Stars.StarsGiftSheet",
+                    "org.telegram.ui.Components.Premium.StarGiftSheet",
+                    "org.telegram.ui.Components.StarGiftSheet",
+                    "org.telegram.ui.Stars.GiftSheet"
+                };
+                for (String cn : tryClasses) {
+                    try {
+                        Class<?> cls = Class.forName(cn);
+                        Object sheet = null;
+                        // (BaseFragment, long)
+                        if (sheet == null) try {
+                            java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(BaseFragment.class, long.class);
+                            c.setAccessible(true); sheet = c.newInstance(lastFragment, userId);
+                        } catch (Exception e0) {}
+                        // (BaseFragment, TLRPC.User)
+                        if (sheet == null) try {
+                            java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(BaseFragment.class, TLRPC.User.class);
+                            c.setAccessible(true); sheet = c.newInstance(lastFragment, target);
+                        } catch (Exception e1) {}
+                        // (int, BaseFragment, long)
+                        if (sheet == null) try {
+                            java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(int.class, BaseFragment.class, long.class);
+                            c.setAccessible(true); sheet = c.newInstance(account, lastFragment, userId);
+                        } catch (Exception e2) {}
+                        // (BaseFragment, long, int)
+                        if (sheet == null) try {
+                            java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(BaseFragment.class, long.class, int.class);
+                            c.setAccessible(true); sheet = c.newInstance(lastFragment, userId, account);
+                        } catch (Exception e3) {}
+                        // (Context, BaseFragment, long)
+                        if (sheet == null) try {
+                            java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(
+                                android.content.Context.class, BaseFragment.class, long.class);
+                            c.setAccessible(true);
+                            sheet = c.newInstance(lastFragment.getParentActivity(), lastFragment, userId);
+                        } catch (Exception e4) {}
+                        // (Context, BaseFragment, TLRPC.User)
+                        if (sheet == null) try {
+                            java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(
+                                android.content.Context.class, BaseFragment.class, TLRPC.User.class);
+                            c.setAccessible(true);
+                            sheet = c.newInstance(lastFragment.getParentActivity(), lastFragment, target);
+                        } catch (Exception e5) {}
+                        if (sheet != null) {
+                            try {
+                                java.lang.reflect.Method m = sheet.getClass().getMethod("show");
+                                m.invoke(sheet); return;
+                            } catch (Exception ex1) {}
+                            try {
+                                java.lang.reflect.Method m = sheet.getClass().getDeclaredMethod("show");
+                                m.setAccessible(true); m.invoke(sheet); return;
+                            } catch (Exception ex2) {}
+                        }
+                    } catch (ClassNotFoundException ignored) {}
+                    catch (Exception e) { FileLog.e("WeryGram " + cn + ": " + e); }
+                }
+                FileLog.e("WeryGram: StarGiftSheet class not found in any known package");
+                toast("Ошибка открытия меню подарков");
             } catch (Exception e) {
                 FileLog.e("WeryGram: " + e);
                 toast("Ошибка открытия меню подарков");
