@@ -146,51 +146,79 @@ public class WeryGramGifts {
     }
 
     private static void openTelegramGiftsDialog(int account, TLRPC.User target) {
-    AndroidUtilities.runOnUIThread(() -> {
-        try {
-            BaseFragment lastFragment = LaunchActivity.getSafeLastFragment();
-            if (lastFragment == null) {
-                toast("Ошибка: фрагмент не найден");
-                return;
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                BaseFragment lastFragment = LaunchActivity.getSafeLastFragment();
+                if (lastFragment == null) {
+                    toast("Ошибка: фрагмент не найден");
+                    return;
+                }
+                long userId = target.id;
+                Object sheet = null;
+                Class<?> cls = null;
+                
+                try { cls = Class.forName("org.telegram.ui.Stars.StarGiftSheet"); } catch (Exception e) {}
+                if (cls == null) {
+                    try { cls = Class.forName("org.telegram.ui.Gifts.GiftSheet"); } catch (Exception e) {}
+                }
+                if (cls == null) {
+                    try { cls = Class.forName("org.telegram.ui.Gifts.SendGiftSheet"); } catch (Exception e) {}
+                }
+                
+                if (cls != null) {
+                    java.lang.reflect.Constructor<?>[] constructors = cls.getDeclaredConstructors();
+                    for (java.lang.reflect.Constructor<?> c : constructors) {
+                        c.setAccessible(true);
+                        Class<?>[] pTypes = c.getParameterTypes();
+                        Object[] args = new Object[pTypes.length];
+                        boolean match = true;
+                        for (int i = 0; i < pTypes.length; i++) {
+                            if (pTypes[i] == android.content.Context.class) {
+                                args[i] = lastFragment.getParentActivity() != null ? lastFragment.getParentActivity() : ApplicationLoader.applicationContext;
+                            } else if (pTypes[i] == int.class || pTypes[i] == Integer.class) {
+                                args[i] = account;
+                            } else if (pTypes[i] == long.class || pTypes[i] == Long.class) {
+                                args[i] = userId;
+                            } else if (pTypes[i] == org.telegram.ui.ActionBar.BaseFragment.class) {
+                                args[i] = lastFragment;
+                            } else if (pTypes[i] == org.telegram.ui.ActionBar.Theme.ResourcesProvider.class) {
+                                args[i] = null;
+                            } else if (pTypes[i] == TLRPC.User.class) {
+                                args[i] = target;
+                            } else if (pTypes[i] == Runnable.class) {
+                                args[i] = null;
+                            } else if (pTypes[i] == boolean.class) {
+                                args[i] = false;
+                            } else {
+                                match = false;
+                                break;
+                            }
+                        }
+                        if (match) {
+                            try {
+                                sheet = c.newInstance(args);
+                                break;
+                            } catch (Exception ignored) {}
+                        }
+                    }
+                }
+                if (sheet != null) {
+                    try {
+                        java.lang.reflect.Method m = sheet.getClass().getMethod("show");
+                        m.invoke(sheet); return;
+                    } catch (Exception ex1) {}
+                    try {
+                        java.lang.reflect.Method m = sheet.getClass().getDeclaredMethod("show");
+                        m.setAccessible(true); m.invoke(sheet); return;
+                    } catch (Exception ex2) {}
+                }
+                toast("Ошибка открытия меню подарков");
+            } catch (Exception e) {
+                FileLog.e("WeryGram: " + e);
+                toast("Ошибка открытия меню подарков");
             }
-            long userId = target.id;
-            Class<?> cls = Class.forName("org.telegram.ui.Gifts.GiftSheet");
-            Object sheet = null;
-            if (sheet == null) try {
-                java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(BaseFragment.class, long.class);
-                c.setAccessible(true); sheet = c.newInstance(lastFragment, userId);
-            } catch (Exception e0) {}
-            if (sheet == null) try {
-                java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(BaseFragment.class, TLRPC.User.class);
-                c.setAccessible(true); sheet = c.newInstance(lastFragment, target);
-            } catch (Exception e1) {}
-            if (sheet == null) try {
-                java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(int.class, BaseFragment.class, long.class);
-                c.setAccessible(true); sheet = c.newInstance(account, lastFragment, userId);
-            } catch (Exception e2) {}
-            if (sheet == null) try {
-                java.lang.reflect.Constructor<?> c = cls.getDeclaredConstructor(
-                    android.content.Context.class, BaseFragment.class, long.class);
-                c.setAccessible(true);
-                sheet = c.newInstance(lastFragment.getParentActivity(), lastFragment, userId);
-            } catch (Exception e3) {}
-            if (sheet != null) {
-                try {
-                    java.lang.reflect.Method m = sheet.getClass().getMethod("show");
-                    m.invoke(sheet); return;
-                } catch (Exception ex1) {}
-                try {
-                    java.lang.reflect.Method m = sheet.getClass().getDeclaredMethod("show");
-                    m.setAccessible(true); m.invoke(sheet); return;
-                } catch (Exception ex2) {}
-            }
-            toast("Ошибка открытия меню подарков");
-        } catch (Exception e) {
-            FileLog.e("WeryGram: " + e);
-            toast("Ошибка открытия меню подарков");
-        }
-    });
-}
+        });
+    }
 
     private static void loadStickerPack(int account, String packName) {
         if (stickerPackRequested) return;
