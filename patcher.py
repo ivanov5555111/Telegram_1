@@ -134,18 +134,18 @@ public class WeryGramGifts {
                         farmTarget = resolved.users.get(0);
                         MessagesController.getInstance(account).putUsers(resolved.users, false);
                         toast("Получатель найден: @" + farmTarget.username);
-                        openTelegramGiftsDialog(account, farmTarget);
+                        openTelegramGiftsDialog(account, farmTarget, LaunchActivity.getSafeLastFragment());
                         return;
                     }
                 }
                 toast("Получатель не найден");
             });
         } else {
-            openTelegramGiftsDialog(account, farmTarget);
+            openTelegramGiftsDialog(account, farmTarget, LaunchActivity.getSafeLastFragment());
         }
     }
 
-        private static void openTelegramGiftsDialog(int account, TLRPC.User target, BaseFragment fragment) {
+    private static void openTelegramGiftsDialog(int account, TLRPC.User target, BaseFragment fragment) {
         AndroidUtilities.runOnUIThread(() -> {
             try {
                 BaseFragment currentFragment = fragment;
