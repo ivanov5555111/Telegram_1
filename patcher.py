@@ -819,7 +819,7 @@ def main():
 
     text = read(sa)
 
-     if 'SettingCell.Factory.of(1000' not in text:
+    if 'SettingCell.Factory.of(1000' not in text:
         account_button_marker = 'items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account'
         if account_button_marker in text:
             wery_button = 'items.add(SettingCell.Factory.of(1000, 0xFF9C27B0, 0xFF7B1FA2, R.drawable.msg_settings, "WeryGram"));\n        '
@@ -858,4 +858,4 @@ def main():
     print("\n✅ Done. WeryGram patched successfully!")
 
 if __name__ == "__main__":
-    main()                presentFragment(new WeryGramPremiumAct
+    main()
